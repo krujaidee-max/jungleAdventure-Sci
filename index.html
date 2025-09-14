@@ -975,12 +975,12 @@ function dropQuestion(text, imgSrc){
   qBox.style.opacity = '';
   qImg.style.opacity = '';
   qBox.style.pointerEvents = 'auto';
+  qBox.style.top = 'var(--qTop)';
   qBox.style.display = 'block';
 
   // รีเซ็ตคลาส FX
   qBox.classList.remove('out-left','out-right','in-go','in-pre');
   qImg.classList.remove('out-left','out-right','in-go','in-pre');
-  qBox.classList.add('fx','in-pre');
   qImg.classList.add('fx','in-pre');
 
   // รูปภาพ
@@ -1899,5 +1899,6 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
 
