@@ -55,11 +55,16 @@ body{
   z-index:15000;
 }
 
-/* === ซ่อน HUD/นาฬิกา จนกว่าจะเริ่มเกม === */
-body:not(.in-game) .hud,
+/* === ซ่อน/แสดง HUD และนาฬิกา === */
+/* ซ่อน HUD ถ้าไม่ได้อยู่ในเกม และไม่ได้อยู่หน้า prestart */
+body:not(.in-game):not(.prestart) .hud {
+  display: none !important;
+}
+/* นาฬิกา โผล่เฉพาะตอน in-game เท่านั้น */
 body:not(.in-game) #clock {
   display: none !important;
 }
+
 
 
 /* ===== Game Clock (Top Center, uses existing timer) ===== */
@@ -1644,7 +1649,8 @@ function startRoundTimer(){
 }
 
   function startGame(){
-        document.body.classList.add('in-game');   // ✅ แสดง HUD เมื่อเริ่มเล่นจริง
+    document.body.classList.remove('prestart');
+    document.body.classList.add('in-game');   // ✅ แสดง HUD เมื่อเริ่มเล่นจริง
     running=true; ended=false; paused=false;
     overlay.style.visibility='hidden'; overlay.style.opacity='0';
     score=0; round=0; updateHUD();
@@ -1755,6 +1761,7 @@ document.getElementById('quickRestart')?.addEventListener('click', ()=>{
   const countdownEl  = document.getElementById('countdown');
 
   function openStart(autoCountdown=true){
+    document.body.classList.add('prestart');   // ให้ HUD โผล่ก่อนเริ่มเกม
     startScreen.style.display='flex';
   
     if(autoCountdown){
@@ -1913,6 +1920,7 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
 
 
