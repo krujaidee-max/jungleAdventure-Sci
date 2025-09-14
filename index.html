@@ -1114,7 +1114,7 @@ const id = setInterval(() => {
   const ny = Math.round(yMin + Math.random() * Math.max(0, yMax - yMin));
   el.style.left = nx + 'px';
   el.style.top  = ny + 'px';
-}, 2600 + Math.random() * 1300);
+}, 3000 + Math.random() * 1300);
 driftTimers.push(id);
 
 
@@ -1907,6 +1907,7 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
 
 
