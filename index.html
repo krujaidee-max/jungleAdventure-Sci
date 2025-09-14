@@ -978,10 +978,13 @@ function dropQuestion(text, imgSrc){
   qBox.style.top = 'var(--qTop)';
   qBox.style.display = 'block';
 
+  // ซ่อนข้อความไว้จนกว่ารูปจะพร้อม
+  qBox.style.visibility = 'hidden';
+
   // รีเซ็ตคลาส FX
   qBox.classList.remove('out-left','out-right','in-go','in-pre');
   qImg.classList.remove('out-left','out-right','in-go','in-pre');
-  qImg.classList.add('fx','in-pre');
+  qImg.classList.add('fx','in-pre');   // qBox ไม่มี fx/in-pre แล้ว
 
   // รูปภาพ
   if (qImg){
@@ -990,33 +993,38 @@ function dropQuestion(text, imgSrc){
 
       const startIn = () => {
         qImg.style.display = 'block';
+        qBox.style.visibility = 'visible';  // ✅ โชว์ข้อความเมื่อรูปพร้อมแล้ว
         requestAnimationFrame(() => {
-          qBox.classList.add('in-go');
+          // ใส่คลาสเข้าให้รูป (และจะใส่ให้ qBox ถ้าต้องการเอฟเฟกต์ข้อความด้วย)
           qImg.classList.add('in-go');
+          // ถ้าอยากให้ข้อความนิ่ง ๆ ไม่ต้องใส่ in-go ให้ qBox
+          // qBox.classList.add('in-go');
         });
       };
       const textOnly = () => {
         qImg.style.display = 'none';
-        requestAnimationFrame(() => {
-          qBox.classList.add('in-go');
-        });
+        qBox.style.visibility = 'visible';   // ✅ รูปไม่มา แต่ปล่อยข้อความได้
+        // ถ้าอยากให้ข้อความนิ่ง ๆ ก็คงไว้แบบไม่มี in-go
+        // requestAnimationFrame(() => qBox.classList.add('in-go'));
       };
 
       qImg.onload  = startIn;
       qImg.onerror = textOnly;
       qImg.src = imgSrc;
 
+      // เผื่อรูป cache แล้ว
       if (qImg.complete && qImg.naturalWidth > 0) startIn();
 
     } else {
+      // ไม่มีรูป → แสดงข้อความทันที
       qImg.style.display = 'none';
       qImg.removeAttribute('src');
-      requestAnimationFrame(() => {
-        qBox.classList.add('in-go');
-      });
+      qBox.style.visibility = 'visible';
+      // requestAnimationFrame(() => qBox.classList.add('in-go')); // ถ้าอยากมีเอฟเฟกต์
     }
   }
 }
+
 
   /* ---------- ตัวเลือก 2 วงกลมด้านซ้าย/ขวา ---------- */
   function clearOptionGlows(){ document.querySelectorAll('.option.circle.glow').forEach(n=>n.classList.remove('glow')); }
@@ -1899,6 +1907,7 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
 
 
