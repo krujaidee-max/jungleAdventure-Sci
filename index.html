@@ -1020,8 +1020,7 @@ function dropQuestion(text, imgSrc){
   // กันแขวนกรณีเน็ตช้า
   setTimeout(()=>{ if(!started) startIn(); }, 800);
 }
-  }
-}
+
 
   /* ---------- ตัวเลือก 2 วงกลมด้านซ้าย/ขวา ---------- */
   function clearOptionGlows(){ document.querySelectorAll('.option.circle.glow').forEach(n=>n.classList.remove('glow')); }
@@ -1901,5 +1900,6 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
 
