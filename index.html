@@ -966,58 +966,60 @@ function stopTimebar(){}                  // no-op
 function updateTimebar(){}                // no-op
 
 function dropQuestion(text, imgSrc){
-  // ข้อความ
+  // ตั้งข้อความก่อน แต่ยังไม่ animate
   qBox.textContent = String(text);
 
-  // รีเซ็ตของค้างจากรอบก่อน
-  qBox.style.transition = '';
-  qImg.style.transition = '';
-  qBox.style.opacity = '';
-  qImg.style.opacity = '';
-  qBox.style.pointerEvents = 'auto';
-
-  // คืนตำแหน่งให้ยึดค่าจาก CSS var
-  qBox.style.top = 'var(--qTop)';
-  qBox.style.display = 'block';
-
-  // รีเซ็ตคลาส FX
+  // รีเซ็ต FX
   qBox.classList.remove('out-left','out-right','in-go','in-pre');
   qImg.classList.remove('out-left','out-right','in-go','in-pre');
   qBox.classList.add('fx','in-pre');
   qImg.classList.add('fx','in-pre');
 
-  // รูปภาพ
-  if (qImg){
-    if (imgSrc){
-      qImg.style.display = 'none';
+  // visible พื้นฐาน
+  qBox.style.top = 'var(--qTop)';
+  qBox.style.display = 'block';
+  qBox.style.pointerEvents = 'auto';
 
-      const startIn = () => {
-        qImg.style.display = 'block';
-        requestAnimationFrame(() => {
-          qBox.classList.add('in-go');
-          qImg.classList.add('in-go');
-        });
-      };
-      const textOnly = () => {
-        qImg.style.display = 'none';
-        requestAnimationFrame(() => {
-          qBox.classList.add('in-go');
-        });
-      };
+  // กันซ้ำ onload/complete
+  let started = false;
+  const startIn = () => {
+    if (started) return;
+    started = true;
+    qImg.style.display = imgSrc ? 'block' : 'none';
+    requestAnimationFrame(()=>{
+      qBox.classList.add('in-go');
+      if (imgSrc) qImg.classList.add('in-go');
+    });
+  };
 
-      qImg.onload  = startIn;
-      qImg.onerror = textOnly;
-      qImg.src = imgSrc;
+  // ไม่มีรูป -> ข้อความอย่างเดียว
+  if (!imgSrc){
+    qImg.style.display = 'none';
+    qImg.removeAttribute('src');
+    startIn();
+    return;
+  }
 
-      if (qImg.complete && qImg.naturalWidth > 0) startIn();
+  // มีรูป -> รอโหลด (กันซ้ำทั้ง complete/onload)
+  qImg.style.display = 'none';
+  qImg.onload  = () => startIn();
+  qImg.onerror = () => {
+    // โหลดรูปไม่ได้ -> แสดงข้อความอย่างเดียว
+    started = false;
+    qImg.style.display = 'none';
+    qImg.removeAttribute('src');
+    startIn();
+  };
+  qImg.src = imgSrc;
 
-    } else {
-      qImg.style.display = 'none';
-      qImg.removeAttribute('src');
-      requestAnimationFrame(() => {
-        qBox.classList.add('in-go');
-      });
-    }
+  // รูปแคช -> complete จริงทันที
+  if (qImg.complete && qImg.naturalWidth > 0){
+    startIn();
+  }
+
+  // กันแขวนกรณีเน็ตช้า
+  setTimeout(()=>{ if(!started) startIn(); }, 800);
+}
   }
 }
 
@@ -1899,4 +1901,5 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
