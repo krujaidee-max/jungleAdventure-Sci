@@ -1718,6 +1718,7 @@ function pauseGame(){
   
 
 document.getElementById('quickRestart')?.addEventListener('click', ()=>{
+    document.body.classList.remove('prestart');
     restorePlayfield();   // ✅ คืนสนามเกม
     overlay.style.visibility='hidden';
     overlay.style.opacity='0';
@@ -1744,6 +1745,7 @@ document.getElementById('quickRestart')?.addEventListener('click', ()=>{
 
 
   selectLevelBtn.addEventListener('click', ()=>{
+    document.body.classList.remove('prestart');
     restorePlayfield();   // ✅ คืนสนามเกม
     overlay.style.visibility='hidden';
     overlay.style.opacity='0';
@@ -1784,6 +1786,7 @@ document.querySelectorAll('.levelBtn').forEach(btn=>{
   if(btn.id==='guideBtn') return;
   btn.addEventListener('click', ()=>{
     const lv = Number(btn.dataset.level || 0);
+    document.body.classList.remove('prestart'); // กันไว้ก่อน
     currentLevel = (lv===1)?1:0;
     document.getElementById('landing').classList.add('hide');
     openStart(false);
@@ -1920,6 +1923,7 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
 
 
