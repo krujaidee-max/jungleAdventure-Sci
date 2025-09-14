@@ -1855,7 +1855,13 @@ async function ensureLandmarker(){ if(landmarker) return landmarker; const files
 function drawHandBall(elbowIdx, wristIdx, lm){ if(!lm[elbowIdx]||!lm[wristIdx]) return null; const elbow = mapToScreen(lm[elbowIdx].x, lm[elbowIdx].y); const wrist = mapToScreen(lm[wristIdx].x, lm[wristIdx].y); const r=24; const L=Math.max(1, Math.hypot(wrist.x-elbow.x, wrist.y-elbow.y)); const ux=(wrist.x-elbow.x)/L, uy=(wrist.y-elbow.y)/L; const HAND_PUSH=1.5, PUSH_PX=6; const center={ x: wrist.x + ux*(r*HAND_PUSH+PUSH_PX), y: wrist.y + uy*(r*HAND_PUSH+PUSH_PX) }; if(SHOW_HAND_BALL){ ctx.beginPath(); ctx.arc(center.x,center.y,r,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke(); } hitByCircle(center, r*.95); return center }
 function drawPoseAndColliders(res){ const sw=innerWidth, sh=innerHeight; ctx.clearRect(0,0,sw,sh); if(!res?.landmarks?.length) return; const lm=res.landmarks[0]; drawHandBall(13,15,lm); drawHandBall(14,16,lm) }
 function runLoop(){ const step=()=>{ if(!video.videoWidth){ raf=requestAnimationFrame(step); return } const now=performance.now(); try{ const {sX,sY,sW,sH}=coverCropRect(); detectCtx.drawImage(video, sX,sY,sW,sH, 0,0, detectCanvas.width, detectCanvas.height); const res=landmarker.detectForVideo(detectCanvas, now); drawPoseAndColliders(res) }catch(e){} raf=requestAnimationFrame(step) }; raf=requestAnimationFrame(step) }
-async function startCamera(){ await ensureLandmarker(); stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false }); video.srcObject=stream; await video.play().catch(()=>{}); const vw=video.videoWidth||640, vh=video.videoHeight||480; const ratio=vw/vh; detectCanvas.width=DETECT_W; detectCanvas.height=Math.round(DETECT_W/ratio); video.style.display='block'; cvs.style.display='block'; camBtn.textContent='📷 กล้อง: เปิด'; CAM_ON=true; fitCanvas(); runLoop() }
+async function startCamera(){ await ensureLandmarker(); 
+    stream = await navigator.mediaDevices.getUserMedia({
+  video: { width: 960, height: 540, frameRate: 30, facingMode: 'user' },
+  audio: false
+});                       
+                          
+    video.srcObject=stream; await video.play().catch(()=>{}); const vw=video.videoWidth||640, vh=video.videoHeight||480; const ratio=vw/vh; detectCanvas.width=DETECT_W; detectCanvas.height=Math.round(DETECT_W/ratio); video.style.display='block'; cvs.style.display='block'; camBtn.textContent='📷 กล้อง: เปิด'; CAM_ON=true; fitCanvas(); runLoop() }
 function stopCamera(){ cancelAnimationFrame(raf); if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null } try{ video.pause() }catch(e){} video.removeAttribute('srcObject'); video.style.display='none'; cvs.style.display='none'; ctx.clearRect(0,0,innerWidth,innerHeight); camBtn.textContent='📷 กล้อง: ปิด'; CAM_ON=false; fitCanvas() }
 camBtn.addEventListener('click', async ()=>{ if(!stream){ try{ await startCamera() }catch(err){ camBtn.textContent='📷 กล้อง: ไม่ได้รับอนุญาต'; camBtn.disabled=true } } else { stopCamera() } });
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden && stream) stopCamera() });
@@ -1907,6 +1913,7 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
 
 
