@@ -1250,7 +1250,10 @@ flyScoreForEl(pickedElOrNull || null, ok); // แสดง +1/-1 ตรงกล
     timebarWrap.style.opacity='0';
 
     // เคลียร์ของเก่าและไปรอบถัดไป
-    clearRoundObjects(); qBox.textContent=''; qBox.style.top='-200px'; qBox.style.opacity='1'; timebarWrap.style.opacity='1';
+    clearRoundObjects(); 
+    qBox.textContent=''; 
+    qBox.style.opacity='1'; 
+    timebarWrap.style.opacity='1';
 
     round++; updateHUD();
     if(qImg){ qImg.style.display='none'; qImg.removeAttribute('src'); }
@@ -1899,3 +1902,4 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
