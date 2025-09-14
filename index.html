@@ -966,61 +966,60 @@ function stopTimebar(){}                  // no-op
 function updateTimebar(){}                // no-op
 
 function dropQuestion(text, imgSrc){
-  // ตั้งข้อความก่อน แต่ยังไม่ animate
+  // ข้อความ
   qBox.textContent = String(text);
 
-  // รีเซ็ต FX
+  // รีเซ็ตของค้างจากรอบก่อน
+  qBox.style.transition = '';
+  qImg.style.transition = '';
+  qBox.style.opacity = '';
+  qImg.style.opacity = '';
+  qBox.style.pointerEvents = 'auto';
+
+  // คืนตำแหน่งให้ยึดค่าจาก CSS var
+  qBox.style.top = 'var(--qTop)';
+  qBox.style.display = 'block';
+
+  // รีเซ็ตคลาส FX
   qBox.classList.remove('out-left','out-right','in-go','in-pre');
   qImg.classList.remove('out-left','out-right','in-go','in-pre');
   qBox.classList.add('fx','in-pre');
   qImg.classList.add('fx','in-pre');
 
-  // visible พื้นฐาน
-  qBox.style.top = 'var(--qTop)';
-  qBox.style.display = 'block';
-  qBox.style.pointerEvents = 'auto';
+  // รูปภาพ
+  if (qImg){
+    if (imgSrc){
+      qImg.style.display = 'none';
 
-  // กันซ้ำ onload/complete
-  let started = false;
-  const startIn = () => {
-    if (started) return;
-    started = true;
-    qImg.style.display = imgSrc ? 'block' : 'none';
-    requestAnimationFrame(()=>{
-      qBox.classList.add('in-go');
-      if (imgSrc) qImg.classList.add('in-go');
-    });
-  };
+      const startIn = () => {
+        qImg.style.display = 'block';
+        requestAnimationFrame(() => {
+          qBox.classList.add('in-go');
+          qImg.classList.add('in-go');
+        });
+      };
+      const textOnly = () => {
+        qImg.style.display = 'none';
+        requestAnimationFrame(() => {
+          qBox.classList.add('in-go');
+        });
+      };
 
-  // ไม่มีรูป -> ข้อความอย่างเดียว
-  if (!imgSrc){
-    qImg.style.display = 'none';
-    qImg.removeAttribute('src');
-    startIn();
-    return;
+      qImg.onload  = startIn;
+      qImg.onerror = textOnly;
+      qImg.src = imgSrc;
+
+      if (qImg.complete && qImg.naturalWidth > 0) startIn();
+
+    } else {
+      qImg.style.display = 'none';
+      qImg.removeAttribute('src');
+      requestAnimationFrame(() => {
+        qBox.classList.add('in-go');
+      });
+    }
   }
-
-  // มีรูป -> รอโหลด (กันซ้ำทั้ง complete/onload)
-  qImg.style.display = 'none';
-  qImg.onload  = () => startIn();
-  qImg.onerror = () => {
-    // โหลดรูปไม่ได้ -> แสดงข้อความอย่างเดียว
-    started = false;
-    qImg.style.display = 'none';
-    qImg.removeAttribute('src');
-    startIn();
-  };
-  qImg.src = imgSrc;
-
-  // รูปแคช -> complete จริงทันที
-  if (qImg.complete && qImg.naturalWidth > 0){
-    startIn();
-  }
-
-  // กันแขวนกรณีเน็ตช้า
-  setTimeout(()=>{ if(!started) startIn(); }, 800);
 }
-
 
   /* ---------- ตัวเลือก 2 วงกลมด้านซ้าย/ขวา ---------- */
   function clearOptionGlows(){ document.querySelectorAll('.option.circle.glow').forEach(n=>n.classList.remove('glow')); }
@@ -1375,40 +1374,40 @@ const QUESTION_BANK = [
 ];
 
 const FIXED_IMG_MAP = {
-"ต้นไม้":     "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live1.png",
-"กิ้งก่า":    "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live2.png",
-"ไก่":       "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live3.png",
-"เป็ด":      "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live4.png",
-"เห็ด":      "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live5.png",
-"สาหร่าย":   "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live6.png",
-"นก":       "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live7.png",
-"นกฮูก":     "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live8.png",
-"อีกา":      "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live9.png",
-"มด":       "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live10.png",
-"เต่า":      "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live11.png",
-"แมลง":     "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live12.png",
-"วัว":      "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live13.png",
-"ฉลาม":     "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live14.png",
-"กุ้ง":      "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live15.png",
-"ปลาชะโด":   "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live16.png",
-"ปลา":      "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live17.png",
-"ปลาหมึก":   "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live18.png",
-"ปลาไหล":    "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live19.png",
-"สิงโต":     "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live20.png",
-"แมงมุม":    "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live21.png",
-"วาฬ":      "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live22.png",
-"โลมา":     "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live23.png",
-"ปลาหมอ":   "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live24.png",
-"ปลาเก๋า":   "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live25.png",
-"ลิงกอริล่า":"https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live26.png",
-"ปลาทูน่า":  "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live27.png",
-"ม้าลาย":   "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live28.png",
-"ปู":       "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live29.png",
-"หอย":      "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live30.png",
-"ต้นไผ่":   "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live31.png",
-"จระเข้":   "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live32.png",
-"งู":       "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live33.png",
-"นกอินทรี": "https://raw.githubusercontent.com/krujaidee-max/funnygardenVer.1/main/game_data2/live34.png",
+  "ต้นไม้": "game_data2/live1.png",
+  "กิ้งก่า": "game_data2/live2.png",
+  "ไก่": "game_data2/live3.png",
+  "เป็ด": "game_data2/live4.png",
+  "เห็ด": "game_data2/live5.png",
+  "สาหร่าย": "game_data2/live6.png",
+  "นก": "game_data2/live7.png",
+  "นกฮูก": "game_data2/live8.png",
+  "อีกา": "game_data2/live9.png",
+  "มด": "game_data2/live10.png",
+  "เต่า": "game_data2/live11.png",
+  "แมลง": "game_data2/live12.png",
+  "วัว": "game_data2/live13.png",
+  "ฉลาม": "game_data2/live14.png",
+  "กุ้ง": "game_data2/live15.png",
+  "ปลาชะโด": "game_data2/live16.png",
+  "ปลา": "game_data2/live17.png",
+  "ปลาหมึก": "game_data2/live18.png",
+  "ปลาไหล": "game_data2/live19.png",
+  "สิงโต": "game_data2/live20.png",
+  "แมงมุม": "game_data2/live21.png",
+  "วาฬ": "game_data2/live22.png",
+  "โลมา": "game_data2/live23.png",
+    "ปลาหมอ": "game_data2/live24.png",
+  "ปลาเก๋า": "game_data2/live25.png",
+  "ลิงกอริล่า": "game_data2/live26.png",
+  "ปลาทูน่า": "game_data2/live27.png",
+  "ม้าลาย": "game_data2/live28.png",
+  "ปู": "game_data2/live29.png",
+  "หอย": "game_data2/live30.png",
+  "ต้นไผ่": "game_data2/live31.png",
+  "จระเข้": "game_data2/live32.png",
+  "งู": "game_data2/live33.png",
+  "นกอินทรี": "game_data2/live34.png",
   "ฮิปโป": "image/live35.png",
   "จิ้งจก": "image/live36.png",
   "กบ": "image/live37.png",
@@ -1433,54 +1432,54 @@ const FIXED_IMG_MAP = {
   "เฟิร์น": "image/live56.png",
    "คน": "image/live57.png",
 
-"ก้อนหิน":        "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive1.png",
-"ลม":            "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive2.png",
-"ดินสอ":         "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive3.png",
-"รถยนต์":        "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive4.png",
-"โต๊ะ":          "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive5.png",
-"ทราย":         "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive6.png",
-"ดวงจันทร์":     "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive7.png",
-"น้ำแข็ง":       "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive8.png",
-"เมฆ":          "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive9.png",
-"โทรศัพท์มือถือ":"https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive10.png",
-"เอไอ":         "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive11.png",
-"พัดลม":        "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive12.png",
-"ตู้เย็น":       "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive13.png",
-"น้ำ":          "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive14.png",
-"หลอดไฟ":       "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive15.png",
-"โคลน":         "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive16.png",
-"ดวงอาทิตย์":   "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive17.png",
-"ขวด":          "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive18.png",
-"นาฬิกา":       "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive19.png",
-"เหล็ก":        "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive20.png",
-"สมุด":         "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive21.png",
-"หุ่นยนต์":      "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive22.png",
-"ตุ๊กตา":        "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive23.png",
-"ขนม":          "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive24.png",
-"ดินน้ำมัน":     "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive25.png",
-"ทอง":          "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive26.png",
-"หม้อหุงข้าว":   "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive27.png",
-"ไฟ":           "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive28.png",
-"ร่ม":          "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive29.png",
-"กระเป๋า":       "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive30.png",
-"รองเท้า":    "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive31.png",
-"เสื้อผ้า":   "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive32.png",
-"จักรยาน":    "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive33.png",
-"ไฟฟ้า":      "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive34.png",
-"รถไฟ":       "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive35.png",
-"เครื่องบิน": "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive36.png",
-"เรือ":        "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive37.png",
-"สะพาน":      "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive38.png",
-"บ้าน":        "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive39.png",
-"ยางรถ":       "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive40.png",
-"กระจก":       "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive41.png",
-"หนังสือ":     "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive42.png",
-"ลูกบอล":      "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive43.png",
-"ขนมปัง":      "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive44.png",
-"หิมะ":        "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive45.png",
-"กีตาร์":       "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive46.png",
-"เปียโน":      "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive47.png",
-"กล้อง":        "https://raw.githubusercontent.com/krujaidee-max/dataplus/main/game_data/nolive48.png"
+  "ก้อนหิน": "game_data/nolive1.png",
+  "ลม": "game_data/nolive2.png",
+  "ดินสอ": "game_data/nolive3.png",
+  "รถยนต์": "game_data/nolive4.png",
+  "โต๊ะ": "game_data/nolive5.png",
+  "ทราย": "game_data/nolive6.png",
+  "ดวงจันทร์": "game_data/nolive7.png",
+  "น้ำแข็ง": "game_data/nolive8.png",
+  "เมฆ": "game_data/nolive9.png",
+  "โทรศัพท์มือถือ": "game_data/nolive10.png",
+  "เอไอ": "game_data/nolive11.png",
+  "พัดลม": "game_data/nolive12.png",
+  "ตู้เย็น": "game_data/nolive13.png",
+  "น้ำ": "game_data/nolive14.png",
+  "หลอดไฟ": "game_data/nolive15.png",
+  "โคลน": "game_data/nolive16.png",
+  "ดวงอาทิตย์": "game_data/nolive17.png",
+  "ขวด": "game_data/nolive18.png",
+  "นาฬิกา": "game_data/nolive19.png",
+  "เหล็ก": "game_data/nolive20.png",
+  "สมุด": "game_data/nolive21.png",
+  "หุ่นยนต์": "game_data/nolive22.png",
+  "ตุ๊กตา": "game_data/nolive23.png",
+  "ขนม": "game_data/nolive24.png",
+  "ดินน้ำมัน": "game_data/nolive25.png",
+  "ทอง": "game_data/nolive26.png",
+  "หม้อหุงข้าว": "game_data/nolive27.png",
+  "ไฟ": "game_data/nolive28.png",
+  "ร่ม": "game_data/nolive29.png",
+  "กระเป๋า": "game_data/nolive30.png",
+  "รองเท้า": "game_data/nolive31.png",
+  "เสื้อผ้า": "game_data/nolive32.png",
+  "จักรยาน": "game_data/nolive33.png",
+  "ไฟฟ้า": "game_data/nolive34.png",
+  "รถไฟ": "game_data/nolive35.png",
+  "เครื่องบิน": "game_data/nolive36.png",
+  "เรือ": "game_data/nolive37.png",
+  "สะพาน": "game_data/nolive38.png",
+  "บ้าน": "game_data/nolive39.png",
+  "ยางรถ": "game_data/nolive40.png",
+  "กระจก": "game_data/nolive41.png",
+  "หนังสือ": "game_data/nolive42.png",
+  "ลูกบอล": "game_data/nolive43.png",
+  "ขนมปัง": "game_data/nolive44.png",
+  "หิมะ": "game_data/nolive45.png",
+  "กีตาร์": "game_data/nolive46.png",
+  "เปียโน": "game_data/nolive47.png",
+  "กล้อง": "game_data/nolive48.png"
 };
 
 /* ===== [LEVEL 1] คลังคำถามแบบ “สิ่งมีชีวิตต้องการอะไร?” 2 ช้อยส์ =====
@@ -1900,6 +1899,3 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
-
-
-
