@@ -975,9 +975,6 @@ function dropQuestion(text, imgSrc){
   qBox.style.opacity = '';
   qImg.style.opacity = '';
   qBox.style.pointerEvents = 'auto';
-
-  // คืนตำแหน่งให้ยึดค่าจาก CSS var
-  qBox.style.top = 'var(--qTop)';
   qBox.style.display = 'block';
 
   // รีเซ็ตคลาส FX
@@ -1902,4 +1899,5 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
