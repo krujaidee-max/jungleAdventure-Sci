@@ -899,6 +899,12 @@ function resumeGameTimer(){
   let score=0, round=0;
   let roundTimer=null, timeLeft=0, awaitingAnswer=false;
 
+function canSpawn(){
+  // ให้เกิดคำถาม/ช้อยส์ได้เฉพาะตอนเกมกำลังวิ่ง และไม่ pause และยังไม่จบ
+  return running && !paused && !ended;
+}
+
+
 
   // เลื่อนวงกลมขึ้นลงเป็นช่วง ๆ
   let driftTimers = [];
@@ -1053,6 +1059,7 @@ function dropQuestion(text, imgSrc){
   function glowGold(el){ if(!el) return; el.classList.add('glow'); }
 
   function spawnTwoCircles(correctTag /* 'living'|'non' */){
+        if (!canSpawn()) return;
     const SIDE_W = innerWidth / 3;
     const PAD = 16;
     const order = Math.random()<0.5 ? ['left','right'] : ['right','left'];
@@ -1146,6 +1153,7 @@ driftTimers.push(id);
 
   // ===== [LEVEL 1] วงกลม 2 ช้อยส์จากคำตอบรายข้อ =====
 function spawnTwoAnswerCircles(choices, correctIndex){
+    if (!canSpawn()) return;
   const order = Math.random()<0.5 ? ['left','right'] : ['right','left'];
   const defs = [
     { idx:0, text: choices[0], side: order[0], cls:'choiceA' },
@@ -1521,14 +1529,14 @@ const NEEDS_BANK = [
   { prompt:"กิ้งก่า", tag:"living", choices:["แมลง","หญ้า"], correct:0 },
   { prompt:"ไก่", tag:"living", choices:["น้ำ","เสื้อผ้า"], correct:0 },
   { prompt:"เป็ด", tag:"living", choices:["น้ำ","โคลน"], correct:0 },
-  { prompt:"สาหร่าย", tag:"living", choices:["แสงแดด","ปุ๋ยเคมี"], correct:0 },
+  { prompt:"สาหร่าย", tag:"living", choices:["แสงแดด","ยาฆ่าแมลง"], correct:0 },
   { prompt:"นก", tag:"living", choices:["เมล็ดพืช","ทราย"], correct:0 },
   { prompt:"มด", tag:"living", choices:["เศษอาหาร","เหล้า"], correct:0 },
   { prompt:"เต่า", tag:"living", choices:["อากาศ","น้ำแข็ง"], correct:0 },
-  { prompt:"แมลง", tag:"living", choices:["น้ำหวาน","พลาสติก"], correct:0 },
+  { prompt:"แมลง", tag:"living", choices:["อาหาร","พลาสติก"], correct:0 },
   { prompt:"วัว", tag:"living", choices:["หญ้า","เนื้อ"], correct:0 },
-  { prompt:"ฉลาม", tag:"living", choices:["ปลาเล็ก","สาหร่าย"], correct:0 },
-  { prompt:"กุ้ง", tag:"living", choices:["น้ำทะเล","แป้ง"], correct:0 },
+  { prompt:"ฉลาม", tag:"living", choices:["ปลา","สาหร่าย"], correct:0 },
+  { prompt:"กุ้ง", tag:"living", choices:["น้ำ","แป้ง"], correct:0 },
   { prompt:"ปลาชะโด", tag:"living", choices:["ปลาเล็ก","ก้อนหิน"], correct:0 },
   { prompt:"ปลา", tag:"living", choices:["ออกซิเจน","เหล็ก"], correct:0 },
   { prompt:"ปลาหมึก", tag:"living", choices:["น้ำทะเล","แสงแดด"], correct:0 },
@@ -1538,12 +1546,12 @@ const NEEDS_BANK = [
   { prompt:"วาฬ", tag:"living", choices:["แพลงก์ตอน","น้ำแข็ง"], correct:0 },
   { prompt:"โลมา", tag:"living", choices:["ปลาเล็ก","ขนมกรอบ"], correct:0 },
   { prompt:"ปลาหมอ", tag:"living", choices:["อากาศ","ใบไม้"], correct:0 },
-  { prompt:"ลิงกอริล่า", tag:"living", choices:["ผลไม้สุก","ถุงมือหนัง"], correct:0 },
-  { prompt:"ปลาทูน่า", tag:"living", choices:["ปลาขนาดเล็ก","ผลไม้"], correct:0 },
+  { prompt:"ลิงกอริล่า", tag:"living", choices:["ผลไม้","ต้นไม้"], correct:0 },
+  { prompt:"ปลาทูน่า", tag:"living", choices:["ออกซิเจน","ผลไม้"], correct:0 },
   { prompt:"ม้าลาย", tag:"living", choices:["หญ้า","นักท่องเที่ยว"], correct:0 },
-  { prompt:"ปู", tag:"living", choices:["น้ำ","เชือกฟาง"], correct:0 },
+  { prompt:"ปู", tag:"living", choices:["น้ำ","กะลา"], correct:0 },
   { prompt:"หอย", tag:"living", choices:["อากาศ","แสงแดด"], correct:0 },
-  { prompt:"ต้นไผ่", tag:"living", choices:["แสงแดด","สีทา"], correct:0 },
+  { prompt:"ต้นไผ่", tag:"living", choices:["ธาตุอาหาร","สีทา"], correct:0 },
   { prompt:"จระเข้", tag:"living", choices:["เนื้อสัตว์","พงหญ้า"], correct:0 },
   { prompt:"งู", tag:"living", choices:["หนู","ดอกไม้"], correct:0 },
   { prompt:"นกอินทรี", tag:"living", choices:["ปลา","เงิน"], correct:0 },
@@ -1560,9 +1568,9 @@ const NEEDS_BANK = [
   { prompt:"หมู", tag:"living", choices:["ผัก","เสียงเพลง"], correct:0 },
   { prompt:"ต้นข้าว", tag:"living", choices:["แสงแดด","รถไถ"], correct:0 },
   { prompt:"เสือ", tag:"living", choices:["เนื้อสัตว์","แชมพู"], correct:0 },
-  { prompt:"หนู", tag:"living", choices:["ธัญพืช","ชีส"], correct:0 },
+  { prompt:"หนู", tag:"living", choices:["ธัญพืช","น้ำผึ้ง"], correct:0 },
   { prompt:"ควาย", tag:"living", choices:["หญ้า","แปรงสีฟัน"], correct:0 },
-  { prompt:"ต้นกระบองเพชร", tag:"living", choices:["แสงแดด","ก้อนหิน"], correct:0 },
+  { prompt:"ต้นกระบองเพชร", tag:"living", choices:["ธาตุอาหาร","ทราย"], correct:0 },
   { prompt:"หญ้า", tag:"living", choices:["แสงแดด","วัว"], correct:0 },
   { prompt:"กล้วยไม้", tag:"living", choices:["น้ำ","กระถาง"], correct:0 },
   { prompt:"ดอกไม้", tag:"living", choices:["แสงแดด","กระถาง"], correct:0 },
@@ -1575,7 +1583,7 @@ const NEEDS_BANK = [
   { prompt:"คน", tag:"living", choices:["ผลไม้","เสื้อผ้า"], correct:0 },
   { prompt:"คน", tag:"living", choices:["น้ำ","รถ"], correct:0 },
   { prompt:"คน", tag:"living", choices:["อาหาร","เพลง"], correct:0 },
-  { prompt:"คน", tag:"living", choices:["อากาศ","หนังสือ"], correct:0 },
+  { prompt:"คน", tag:"living", choices:["น้ำ","หนังสือ"], correct:0 },
   { prompt:"คน", tag:"living", choices:["เนื้อสัตว์","บุหรี่"], correct:0 },
 
 
@@ -1639,15 +1647,18 @@ function drawQuestion(){
 }
 
 function nextRound(){
+    if (!canSpawn()) return; 
   clearRoundObjects(); awaitingAnswer=false; stopTimebar();
   qBox.textContent='';
 
   setTimeout(()=>{
+        if (!canSpawn()) return;
     const q = drawQuestion();
     dropQuestion(q.question, q.img);
 
-    setTimeout(()=>{
-      if (q.mode === 0){
+  setTimeout(()=>{
+         if (!canSpawn()) return;
+     if (q.mode === 0){
         // ด่านเดิม
         spawnTwoCircles(q.correctTag);
       } else {
@@ -1937,19 +1948,6 @@ const observer = new MutationObserver(() => {
 // สังเกตการเปลี่ยนแปลง class ของ landing
 observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
-
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
 
