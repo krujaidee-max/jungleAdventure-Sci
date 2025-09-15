@@ -332,9 +332,26 @@ body:not(.in-game) #clock {
 #camCanvas{ position:fixed; inset:0; width:100vw; height:100vh; z-index:2; pointer-events:none; display:none }
 #game{ z-index:3; position:relative }
 
-/* ===== ปุ่ม Mute / Fullscreen ===== */
-#muteBtn, #fsBtn{ position:fixed; right:12px; width:44px; height:44px; border-radius:999px; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.3); color:#fff; font-size:18px; line-height:1; display:grid; place-items:center; cursor:pointer; z-index:10000 }
-#muteBtn{ bottom:12px } #fsBtn{ bottom:62px }
+/* ปุ่ม Mute / Fullscreen (ดันมาอยู่หน้าสุด) */
+#muteBtn, #fsBtn{
+  position: fixed;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 50000; /* สูงกว่า HUD และทุก overlay ในเกม */
+}
+#muteBtn{ bottom:12px }
+#fsBtn{ bottom:62px }
+
 
 /* มุมภาพประดับ (มีไฟล์ก็บังไว้ได้) */
 body::after{ content:""; position:fixed; top:0; left:0; width:var(--corner-img-w, 220px); height:var(--corner-img-h, 220px); background:url("image/button1.png") no-repeat left top / contain; pointer-events:none; z-index:10000 }
@@ -1923,6 +1940,7 @@ observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
 
 </body>
 </html>
+
 
 
 
