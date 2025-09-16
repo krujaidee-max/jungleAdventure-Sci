@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>ตัวจิ๋วตะลุยป่า</title>
+<title>ตัวจิ๋วตะลุยป่า ป.1-3</title>
 <style>
 
 /* ===== ฟอนต์รวมหน้า ===== */
@@ -942,7 +942,7 @@ function freezePlayfield(on){
 }
 
 function resetState(){ 
-  // ปิดสถานะการรันเกมทันที
+  clearCountdown();
   running = false;
   ended   = true;
   paused  = false;
@@ -1688,6 +1688,7 @@ function startRoundTimer(){
 
   // ======== จบด่าน (แก้ใหม่: หยุดสนามเกมทั้งหมดเมื่อสรุปคะแนน) ========
   function endLevel(){
+        clearCountdown();
     ended = true;
     running = false;
     clearGameTimer();
@@ -1746,6 +1747,7 @@ function pauseGame(){
   
 
 document.getElementById('quickRestart')?.addEventListener('click', ()=>{
+        clearCountdown();
     document.body.classList.remove('prestart');
     restorePlayfield();   // ✅ คืนสนามเกม
     overlay.style.visibility='hidden';
@@ -1773,6 +1775,7 @@ document.getElementById('quickRestart')?.addEventListener('click', ()=>{
 
 
   selectLevelBtn.addEventListener('click', ()=>{
+        clearCountdown();
     document.body.classList.remove('prestart');
     restorePlayfield();   // ✅ คืนสนามเกม
     overlay.style.visibility='hidden';
@@ -1789,25 +1792,70 @@ document.getElementById('quickRestart')?.addEventListener('click', ()=>{
   const startScreen  = document.getElementById('startScreen');
   const startBtn     = document.getElementById('startBtn');
   const countdownEl  = document.getElementById('countdown');
+let countdownItv = null;
+function clearCountdown(){
+  if (countdownItv){
+    clearInterval(countdownItv);
+    countdownItv = null;
+  }
+  countdownEl.style.display = 'none';
+  countdownEl.textContent = '3';
+  startBtn.style.display = 'inline-block';
+  startBtn.disabled = false;
+  startBtn.style.pointerEvents = 'auto';
+}
+
 
   function openStart(autoCountdown=true){
-    document.body.classList.add('prestart');   // ให้ HUD โผล่ก่อนเริ่มเกม
+        clearCountdown(); 
+    document.body.classList.add('prestart');   
     startScreen.style.display='flex';
   
-    if(autoCountdown){
-      let n=3; countdownEl.textContent=n; countdownEl.style.display='block';
-      const itv=setInterval(()=>{ n--; if(n>0){countdownEl.textContent=n}else{ clearInterval(itv); startScreen.style.display='none'; startGame() } },1000);
+    if (autoCountdown) {
+  let n = 3;
+  countdownEl.textContent = n;
+  countdownEl.style.display = 'block';
+
+  countdownItv = setInterval(() => {
+    n--;
+    if (n > 0) {
+      countdownEl.textContent = n;
     } else {
+      clearInterval(countdownItv);
+      countdownItv = null;
+      startScreen.style.display = 'none';
+      startGame();
+    }
+  }, 1000);
+}
+ else {
       startBtn.disabled=false; startBtn.style.pointerEvents='auto';
       startBtn.style.display='inline-block'; countdownEl.style.display='none';
     }
   }
   startBtn?.addEventListener('click', ()=>{
+         clearCountdown();
     if(startBtn.disabled) return;
     startBtn.disabled=true; startBtn.style.pointerEvents='none';
     startBtn.style.display='none';
-    let n=3; countdownEl.textContent=n; countdownEl.style.display='block';
-    const itv=setInterval(()=>{ n--; if(n>0){ countdownEl.textContent=n } else { clearInterval(itv); startScreen.style.display='none'; startGame(); startBtn.disabled=false; startBtn.style.pointerEvents='auto'; } },1000);
+    let n = 3;
+countdownEl.textContent = n;
+countdownEl.style.display = 'block';
+
+countdownItv = setInterval(() => {
+  n--;
+  if (n > 0) {
+    countdownEl.textContent = n;
+  } else {
+    clearInterval(countdownItv);
+    countdownItv = null;
+    startScreen.style.display = 'none';
+    startGame();
+    startBtn.disabled = false;
+    startBtn.style.pointerEvents = 'auto';
+  }
+}, 1000);
+
   });
 
 document.querySelectorAll('.levelBtn').forEach(btn=>{
@@ -1934,20 +1982,7 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden && stream
   document.getElementById('guideBack')?.addEventListener('click', ()=>{ guideScreen.style.display='none'; landing.classList.remove('hide') });
 })();
 </script>
-
-const landing = document.getElementById('landing');
-const bgm = document.getElementById('bgm');
-
-const observer = new MutationObserver(() => {
-  // ถ้า landing โผล่กลับมา (ไม่มี class hide) และเพลงยังไม่เล่น → เล่นเลย
-  if (!landing.classList.contains('hide') && bgm.paused) {
-    bgm.play().catch(()=>{});
-  }
-});
-
-// สังเกตการเปลี่ยนแปลง class ของ landing
-observer.observe(landing, { attributes: true, attributeFilter: ['class'] });
-
 </body>
 </html>
+
 
