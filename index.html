@@ -4,7 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ตัวจิ๋วตะลุยป่า ป.1-3</title>
-<link rel="preconnect" href="https://krujaidee-max.github.io/jungleAdventure-Sci" crossorigin>
 <style>
 
 /* ===== ฟอนต์รวมหน้า ===== */
@@ -787,6 +786,20 @@ function resetClockUI(){
     const welcome = document.getElementById('welcome');
     const enterBtn = document.getElementById('enterBtn');
     const landing = document.getElementById('landing');
+async function startGame(){
+  // กันผู้เล่นกดจนถึงเกมก่อนพรีโหลดเสร็จ
+  while (!window.__ALL_IMAGES_READY__) {
+    await new Promise(r=>setTimeout(r, 120));
+  }
+  document.body.classList.remove('prestart');
+  document.body.classList.add('in-game');
+  running=true; ended=false; paused=false;
+  overlay.style.visibility='hidden'; overlay.style.opacity='0';
+  score=0; round=0; updateHUD();
+  startGameTimer();
+  nextRound();
+}
+
 
  enterBtn.addEventListener('click', ()=>{ 
     welcome.classList.add('hide'); 
@@ -995,39 +1008,6 @@ function stopTimebar(){}                  // no-op
 function updateTimebar(){}                // no-op
 
 function dropQuestion(text, imgSrc){
-  async function dropQuestion(text, imgSrc){
-  qBox.textContent = String(text);
-  qBox.style.display = 'block';
-  qBox.style.visibility = 'hidden';
-
-  qBox.classList.remove('out-left','out-right','in-go','in-pre');
-  qImg.classList.remove('out-left','out-right','in-go','in-pre');
-  qImg.classList.add('fx','in-pre');
-
-  if (!imgSrc){
-    if (qImg){ qImg.style.display = 'none'; qImg.removeAttribute('src'); }
-    qBox.style.visibility = 'visible';
-    return;
-  }
-
-  const ok = await loadImageWithTimeout(imgSrc).catch(()=>false);
-
-  if (ok){
-    if (qImg){
-      qImg.src = imgSrc;
-      qImg.style.display = 'block';
-      qBox.style.visibility = 'visible';
-      requestAnimationFrame(() => qImg.classList.add('in-go'));
-    }
-  }else{
-    if (qImg){
-      qImg.style.display = 'none';
-      qImg.removeAttribute('src');
-    }
-    qBox.style.visibility = 'visible';
-  }
-}
-
   // ข้อความ
   qBox.textContent = String(text);
 
@@ -1554,46 +1534,114 @@ const FIXED_IMG_MAP = {
   "กล้อง": "game_data/nolive48.png"
 };
 
-  /* ===== Image Preload Utils ===== */
-const IMG_PRELOAD_TIMEOUT = 3500;
-const __imgCache = new Map();
+/* ===== Image Preload (batched + retry + progress) ===== */
+const __imgMemo = new Map();
 
-function loadImageWithTimeout(src, timeout = IMG_PRELOAD_TIMEOUT){
+function preloadOne(src, timeout = 8000, tries = 2){
   if (!src) return Promise.resolve(false);
-  if (__imgCache.has(src)) return __imgCache.get(src);
+  if (__imgMemo.has(src)) return __imgMemo.get(src);
 
-  const p = new Promise((resolve) => {
+  const runner = (attempt)=> new Promise(resolve=>{
     const img = new Image();
     let done = false;
-    const settle = (ok)=>{ if (done) return; done = true; resolve(ok); };
-    const t = setTimeout(()=> settle(false), timeout);
-    img.onload  = ()=>{ clearTimeout(t); settle(true); };
-    img.onerror = ()=>{ clearTimeout(t); settle(false); };
-    img.referrerPolicy = 'no-referrer';
+    const settle = ok => { if (done) return; done = true; resolve(ok); };
+    const t = setTimeout(()=>{ img.onload = img.onerror = null; if (attempt<tries) {
+        settle(false);
+      } else settle(false);
+    }, timeout);
+    img.onload  = ()=>{ clearTimeout(t); settle(true);  };
+    img.onerror = ()=>{ clearTimeout(t); if (attempt < tries) {
+        // ลองใหม่หลังพักสั้น ๆ
+        setTimeout(()=> runner(attempt+1).then(resolve), 250 + Math.random()*500);
+      } else settle(false);
+    };
     img.decoding = 'async';
     img.loading  = 'eager';
+    img.referrerPolicy = 'no-referrer';
     img.src = src;
   });
 
-  __imgCache.set(src, p);
+  const p = runner(0);
+  __imgMemo.set(src, p);
   return p;
 }
 
-function pickLevelImages(level){
-  const arr = [];
-  const pushFrom = (bank)=> bank.forEach(q => { if (q.img) arr.push(q.img); });
-  if (level === 1) pushFrom(LEVEL1_BANK);
-  else if (level === 2) pushFrom(NEEDS_BANK);
-  else if (level === 3) pushFrom(LEVEL3_BANK);
-  return [...new Set(arr)];
-}
-
-async function preloadByBatches(srcList, batchSize = 16){
-  for (let i = 0; i < srcList.length; i += batchSize){
-    const batch = srcList.slice(i, i + batchSize).map(s => loadImageWithTimeout(s));
-    await Promise.allSettled(batch);
+async function preloadInBatches(urls, batchSize = 16, onProgress = ()=>{}){
+  const list = urls.filter(Boolean);
+  let done = 0;
+  const step = async batch=>{
+    await Promise.allSettled(batch.map(u=>preloadOne(u)));
+    done += batch.length;
+    onProgress(Math.min(1, done / list.length));
+  };
+  for (let i=0; i<list.length; i+=batchSize){
+    const batch = list.slice(i, i+batchSize);
+    /* อย่าอัดพร้อมกันทีเดียวทั้งหมด — GitHub Pages จะหอบ */
+    // หน่วงเล็กน้อยระหว่างแบตช์ ช่วยเสถียรบน GitHub
+    await step(batch);
+    await new Promise(r=>setTimeout(r, 60));
   }
 }
+
+/* รวมลิสต์รูปทั้งหมดที่เกมต้องใช้ */
+function collectAllGameImages(){
+  const uniq = new Set();
+
+  // จาก FIXED_IMG_MAP
+  Object.values(FIXED_IMG_MAP).forEach(p => uniq.add(p));
+
+  // จากธง/แบนเนอร์/ฉาก/ปุ่ม ฯลฯ ที่อ้างตรงใน HTML/CSS
+  [
+    "image/background2.png", "image/banner2.png", "image/welcome.png",
+    "image/guide.png", "image/button1.png", "image/button2.png",
+    "image/ans1.png"
+  ].forEach(p => uniq.add(p));
+
+  // จากแบงค์คำถาม (ถ้าเซ็ต q.img ไว้แล้ว)
+  if (Array.isArray(LEVEL1_BANK)) LEVEL1_BANK.forEach(q => q?.img && uniq.add(q.img));
+  if (Array.isArray(NEEDS_BANK))  NEEDS_BANK.forEach(q  => q?.img && uniq.add(q.img));
+  if (Array.isArray(LEVEL3_BANK)) LEVEL3_BANK.forEach(q => q?.img && uniq.add(q.img));
+
+  // แปลงให้เป็น URL ที่อิงจากหน้าเว็บปัจจุบัน (กันพาธ relative เพี้ยน)
+  return [...uniq].map(p => new URL(p, location.href).href);
+}
+
+/* แสดงผลความคืบหน้าใน overlay */
+function bindPreloadProgress(){
+  const bar  = document.getElementById('preloadBar');
+  const text = document.getElementById('preloadText');
+  return (ratio)=>{
+    const pct = Math.round(ratio*100);
+    if (bar)  bar.style.width = pct + '%';
+    if (text) text.textContent = `กำลังเตรียมแอสเซ็ต… ${pct}%`;
+  };
+}
+
+async function runGlobalPreload(){
+  const urls = collectAllGameImages();
+  const onProgress = bindPreloadProgress();
+  try{
+    await preloadInBatches(urls, 18, onProgress);  // 12–24 กำลังดีบน GitHub Pages
+  } finally {
+    // ไม่ว่าบางรูปจะ fail บ้าง เราก็ไปต่อ (เพราะมี retry แล้ว)
+    document.getElementById('preloadOverlay')?.remove();
+    window.__ALL_IMAGES_READY__ = true;
+  }
+}
+// เริ่มพรีโหลดทันทีที่หน้าโหลดเสร็จ
+window.addEventListener('load', ()=> { runGlobalPreload(); });
+
+enterBtn.addEventListener('click', async ()=>{
+  // ถ้าโหลดยังไม่เสร็จ ให้รอสั้น ๆ ถึงจะเข้าเมนูได้
+  while (!window.__ALL_IMAGES_READY__) {
+    await new Promise(r=>setTimeout(r, 120));
+  }
+  welcome.classList.add('hide');
+  landing.classList.remove('hide');
+  bgm?.play?.().catch(()=>{});
+});
+
+
 /* ===== [LEVEL 1] คลังคำถามแบบ “สิ่งมีชีวิตต้องการอะไร?” 2 ช้อยส์ =====
    ใส่ได้กี่ข้อก็ได้ รูปจะอ้างจาก FIXED_IMG_MAP ตามชื่อ prompt
    choices: [ตัวเลือกซ้าย, ตัวเลือกขวา], correct: index ที่ถูก (0 หรือ 1)
@@ -1659,11 +1707,6 @@ const NEEDS_BANK = [
   { prompt:"คน", tag:"living", choices:["อาหาร","เพลง"], correct:0 },
   { prompt:"คน", tag:"living", choices:["น้ำ","หนังสือ"], correct:0 },
   { prompt:"คน", tag:"living", choices:["เนื้อสัตว์","บุหรี่"], correct:0 },
-
-
-
-
-  // 👉 เพิ่มต่อได้เลยในรูปแบบเดียวกัน
 ];
 
 // ผูกรูปภาพอัตโนมัติให้ NEEDS_BANK (ถ้ามีใน FIXED_IMG_MAP)
@@ -2040,17 +2083,6 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden && stream
     const lv = Number(btn.dataset.level || 0);
     // อ้าง currentLevel ของสคริปต์หลัก (ประกาศ global ใน IIFE แล้ว)
     window.currentLevel = lv; // กันพลาดข้ามสโคป
-      // ==== เริ่มพรีโหลดรูปเฉพาะด่านที่เลือก ====
-  try {
-    const imgs = pickLevelImages(lv);
-    const firstChunk = imgs.slice(0, 16);
-    Promise.allSettled(firstChunk.map(s => loadImageWithTimeout(s)))
-      .then(() => {
-        const rest = imgs.slice(16);
-        preloadByBatches(rest, 24); // preload ต่อเบื้องหลัง
-      });
-  } catch (e) {}
-
     landing.classList.add('hide');
     startScreen.style.display='flex';
     document.getElementById('countdown').style.display='none';
@@ -2067,8 +2099,19 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden && stream
   document.getElementById('guideBack')?.addEventListener('click', ()=>{ guideScreen.style.display='none'; landing.classList.remove('hide') });
 })();
 </script>
+
+<!-- ===== Preload Overlay ===== -->
+<div id="preloadOverlay" style="
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  background:#000c; color:#fff; z-index:99999; flex-direction:column; gap:12px; font-weight:900;">
+  <div id="preloadText" style="font-size:20px">กำลังเตรียมข้อมูล… 0%</div>
+  <div style="width:min(80vw,480px); height:10px; background:#ffffff22; border-radius:999px; overflow:hidden">
+    <div id="preloadBar" style="height:100%; width:0%; background:#10b981"></div>
+  </div>
+  <div style="font-size:12px;opacity:.8">...รอสักครู่...</div>
+</div>
+
 </body>
 </html>
-
 
 
