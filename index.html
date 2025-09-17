@@ -594,16 +594,16 @@ body::before{ content:""; position:fixed; top:0; right:0; width:var(--corner2-im
 <!-- ===== Landing ===== -->
 <div id="landing" role="dialog" aria-modal="true" class="hide">
   <div class="brand"><img src="image/banner2.png" alt="Banner"></div>
-  <div class="level-menu">
-    <button class="levelBtn" data-level="0">สิ่งมีชีวิต หรือ สิ่งไม่มีชีวิต</button>
-        <button class="levelBtn" data-level="1">ปัจจัยที่จำเป็นต่อการเติบโตของสิ่งมีชีวิต</button>
-    <button class="levelBtn" id="guideBtn">กติกาการเล่น 📖</button>
-  </div>
+<div class="level-menu">
+  <button class="levelBtn" data-level="1">สิ่งมีชีวิตหรือสิ่งไม่มีชีวิต</button>
+  <button class="levelBtn" data-level="2">ปัจจัยที่จำเป็นต่อสิ่งมีชีวิต</button>
+  <button class="levelBtn" id="guideBtn">กติกาการเล่น 📖</button>
+   </div>
 </div>
 
 <!-- ===== ภารกิจ / หน้าเริ่ม ===== -->
 <div id="startScreen">
-  <div id="startTitle">ภารกิจ: แตะคำตอบให้ตรง — สิ่งมีชีวิต หรือ สิ่งไม่มีชีวิต</div>
+  <div id="startTitle">ภารกิจ : เลือกวงกลมคำตอบจำแนกสิ่งมีชีวิตให้ถูกต้อง</div>
   <button id="startBtn">เริ่ม</button>
   <div id="countdown">3</div>
 </div>
@@ -709,6 +709,9 @@ body::before{ content:""; position:fixed; top:0; right:0; width:var(--corner2-im
 <!-- ===== ระบบเกม (2 วงกลมเท่านั้น) ===== -->
 <script>
 (()=>{
+// กันรอหลอน ๆ ถ้ายังไม่พรีโหลด
+window.__ALL_IMAGES_READY__ = false;
+
 
   /* ---------- DOM ---------- */
   const game = document.getElementById('game');
@@ -776,9 +779,8 @@ function resetClockUI(){
   const restartBtn = document.getElementById('restartBtn');
   const selectLevelBtn = document.getElementById('selectLevelBtn');
 
-  const goldWrap = document.getElementById('goldWrap');
-  const GOLD = '💎';
-    window.currentLevel = 0; // 0 = ด่านเดิม (มี/ไม่มีชีวิต)
+    window.currentLevel = 1; // เริ่มที่ด่าน 1
+
 
 
   // Welcome -> Landing
@@ -786,19 +788,16 @@ function resetClockUI(){
     const welcome = document.getElementById('welcome');
     const enterBtn = document.getElementById('enterBtn');
     const landing = document.getElementById('landing');
-async function startGame(){
-  // กันผู้เล่นกดจนถึงเกมก่อนพรีโหลดเสร็จ
+// ↓ วางหลัง const welcome / enterBtn / landing
+enterBtn.addEventListener('click', async ()=>{
+  // ถ้าโหลดยังไม่เสร็จ ให้รอจนโหลดครบ
   while (!window.__ALL_IMAGES_READY__) {
-    await new Promise(r=>setTimeout(r, 120));
+    await new Promise(r=>setTimeout(r,120));
   }
-  document.body.classList.remove('prestart');
-  document.body.classList.add('in-game');
-  running=true; ended=false; paused=false;
-  overlay.style.visibility='hidden'; overlay.style.opacity='0';
-  score=0; round=0; updateHUD();
-  startGameTimer();
-  nextRound();
-}
+  welcome.classList.add('hide');
+  landing.classList.remove('hide');
+  bgm?.play?.().catch(()=>{});
+});
 
 
  enterBtn.addEventListener('click', ()=>{ 
@@ -910,14 +909,9 @@ function resumeGameTimer(){
   const BLANK_MS=800, Q_DROP_MS=600, Q_HOLD_MS=400, OPT_IN_MS=200, RESULT_MS=1000;
 
   let running=false, ended=false, paused=false;
+  window.ended = ended; // ✅ sync ค่าเริ่มต้นไปยัง global
   let score=0, round=0;
   let roundTimer=null, timeLeft=0, awaitingAnswer=false;
-
-function canSpawn(){
-  // ให้เกิดคำถาม/ช้อยส์ได้เฉพาะตอนเกมกำลังวิ่ง และไม่ pause และยังไม่จบ
-  return running && !paused && !ended;
-}
-
 
 
   // เลื่อนวงกลมขึ้นลงเป็นช่วง ๆ
@@ -956,12 +950,13 @@ function freezePlayfield(on){
 }
 
 function resetState(){ 
-  clearCountdown();
+    clearCountdown();
   running = false;
   ended   = true;
+  window.ended = ended;
   paused  = false;
 
-  // ยกเลิกตัวจับเวลาทุกรอบ/การสุ่มคำถามที่อาจยังค้าง
+
   clearRoundObjects();
   clearGameTimer();
   if (roundTimer){ clearInterval(roundTimer); roundTimer = null; }
@@ -1073,7 +1068,6 @@ function dropQuestion(text, imgSrc){
   function glowGold(el){ if(!el) return; el.classList.add('glow'); }
 
   function spawnTwoCircles(correctTag /* 'living'|'non' */){
-        if (!canSpawn()) return;
     const SIDE_W = innerWidth / 3;
     const PAD = 16;
     const order = Math.random()<0.5 ? ['left','right'] : ['right','left'];
@@ -1167,7 +1161,6 @@ driftTimers.push(id);
 
   // ===== [LEVEL 1] วงกลม 2 ช้อยส์จากคำตอบรายข้อ =====
 function spawnTwoAnswerCircles(choices, correctIndex){
-    if (!canSpawn()) return;
   const order = Math.random()<0.5 ? ['left','right'] : ['right','left'];
   const defs = [
     { idx:0, text: choices[0], side: order[0], cls:'choiceA' },
@@ -1227,6 +1220,7 @@ function spawnTwoAnswerCircles(choices, correctIndex){
 
 
 function tryAnswer(el){
+    if (ended) return;   // ❗ จบเกมแล้ว ห้ามกดตอบ
   if(!awaitingAnswer) return;
   const ok = (el.dataset.correct === 'true');
   awaitingAnswer=false;
@@ -1314,224 +1308,131 @@ flyScoreForEl(pickedElOrNull || null, ok); // แสดง +1/-1 ตรงกล
 }
 
 
- /* ---------- คลังคำถาม (สิ่งมีชีวิต / ไม่มีชีวิต) ---------- */
-const QUESTION_BANK = [
-  { prompt:"ต้นไม้",        tag:"living" },
-  { prompt:"กิ้งก่า",           tag:"living" },
-  { prompt:"ไก่",          tag:"living" },
-  { prompt:"เป็ด",    tag:"living" },
-  { prompt:"เห็ด",           tag:"living" },
-  { prompt:"สาหร่าย", tag:"living" },
-  { prompt:"นก",     tag:"living" },
-  { prompt:"นกฮูก",        tag:"living" },
-  { prompt:"อีกา",     tag:"living" },
-  { prompt:"มด",       tag:"living" },
-  { prompt:"เต่า",     tag:"living" },
-  { prompt:"แมลง",      tag:"living" },
-  { prompt:"วัว",            tag:"living" },
-  { prompt:"ฉลาม",           tag:"living" },
-  { prompt:"กุ้ง",     tag:"living" },
-  { prompt:"ปลาชะโด",       tag:"living" },
-  { prompt:"ปลา",     tag:"living" },
-  { prompt:"ปลาหมึก",      tag:"living" },
-  { prompt:"ปลาไหล",            tag:"living" },
-  { prompt:"สิงโต",           tag:"living" },
-    { prompt:"แมงมุม",           tag:"living" },
-  { prompt:"วาฬ",      tag:"living" },
-  { prompt:"โลมา",            tag:"living" },
-  { prompt:"ปลาหมอ",           tag:"living" },
-  { prompt:"ปลาเก๋า",     tag:"living" },
-  { prompt:"ลิงกอริล่า",       tag:"living" },
-  { prompt:"ปลาทูน่า",     tag:"living" },
-  { prompt:"ม้าลาย",      tag:"living" },
-  { prompt:"ปู",            tag:"living" },
-  { prompt:"หอย",           tag:"living" },
-  { prompt:"ต้นไผ่",       tag:"living" },
-  { prompt:"จระเข้",     tag:"living" },
-  { prompt:"งู",      tag:"living" },
-  { prompt:"นกอินทรี",            tag:"living" },
-  { prompt:"ฮิปโป",           tag:"living" },
-  { prompt:"จิ้งจก",     tag:"living" },
-  { prompt:"กบ",      tag:"living" },
-  { prompt:"หอยทาก",            tag:"living" },
-  { prompt:"ผีเสื้อ",           tag:"living" },
-  { prompt:"ช้าง",     tag:"living" },
-  { prompt:"ยุง",       tag:"living" },
-    { prompt:"หนอน",       tag:"living" },
-  { prompt:"ไส้เดือน",     tag:"living" },
-  { prompt:"หมีแพนด้า",      tag:"living" },
-  { prompt:"หมู",            tag:"living" },
-  { prompt:"ต้นข้าว",           tag:"living" },
-  { prompt:"เสือ",     tag:"living" },
-  { prompt:"หนู",      tag:"living" },
-  { prompt:"ควาย",            tag:"living" },
-  { prompt:"ต้นกระบองเพชร",           tag:"living" },
-  { prompt:"หญ้า",     tag:"living" },
-  { prompt:"กล้วยไม้",       tag:"living" },
-  { prompt:"ดอกไม้",     tag:"living" },
-  { prompt:"ผัก",      tag:"living" },
-  { prompt:"ถั่วงอก",            tag:"living" },
-  { prompt:"เฟิร์น",           tag:"living" },
-    { prompt:"คน",           tag:"living" },
-
-  { prompt:"ก้อนหิน",       tag:"non" },
-  { prompt:"ลม", tag:"non" },
-  { prompt:"ดินสอ",         tag:"non" },
-  { prompt:"รถยนต์",        tag:"non" },
-  { prompt:"โต๊ะ", 	  tag:"non" },
-  { prompt:"ทราย",          tag:"non" },
-  { prompt:"ดวงจันทร์",       tag:"non" },
-  { prompt:"น้ำแข็ง",     tag:"non" },
-  { prompt:"เมฆ",           tag:"non" },
-  { prompt:"โทรศัพท์มือถือ", tag:"non" },
-  { prompt:"เอไอ", tag:"non" },
-  { prompt:"พัดลม", tag:"non" },
-  { prompt:"ตู้เย็น", tag:"non" },
-  { prompt:"น้ำ", tag:"non" },
-  { prompt:"หลอดไฟ", tag:"non" },
-  { prompt:"โคลน", tag:"non" },
-  { prompt:"ดวงอาทิตย์", tag:"non" },
-  { prompt:"ขวด", tag:"non" },
-  { prompt:"นาฬิกา", tag:"non" },
-  { prompt:"เหล็ก", tag:"non" },
-  { prompt:"สมุด", tag:"non" },
-  { prompt:"หุ่นยนต์", tag:"non" },
-  { prompt:"ตุ๊กตา", tag:"non" },
-  { prompt:"ขนม", tag:"non" },
-  { prompt:"ดินน้ำมัน", tag:"non" },
-  { prompt:"ทอง", tag:"non" },
-  { prompt:"หม้อหุงข้าว", tag:"non" },
-  { prompt:"ไฟ", tag:"non" },
-  { prompt:"ร่ม", tag:"non" },
-  { prompt:"กระเป๋า", tag:"non" },
-  { prompt:"รองเท้า", tag:"non" },
-  { prompt:"เสื้อผ้า", tag:"non" },
-  { prompt:"จักรยาน", tag:"non" }, 
-  { prompt:"ไฟฟ้า", tag:"non" },
-  { prompt:"รถไฟ", tag:"non" },
-  { prompt:"เครื่องบิน", tag:"non" },
-  { prompt:"เรือ", tag:"non" },
-  { prompt:"สะพาน", tag:"non" },
-  { prompt:"บ้าน", tag:"non" },
-  { prompt:"ยางรถ", tag:"non" },
-  { prompt:"กระจก", tag:"non" },
-  { prompt:"หนังสือ", tag:"non" },
-  { prompt:"ลูกบอล", tag:"non" },
-  { prompt:"ขนมปัง", tag:"non" },
-  { prompt:"หิมะ", tag:"non" },
-  { prompt:"กีตาร์", tag:"non" },
-  { prompt:"เปียโน", tag:"non" },
-  { prompt:"กล้อง", tag:"non" },
-
-];
-
+ /* ---------ผูกรูปภาพ--------- */
 const FIXED_IMG_MAP = {
-  "ต้นไม้": "game_data2/live1.png",
-  "กิ้งก่า": "game_data2/live2.png",
-  "ไก่": "game_data2/live3.png",
-  "เป็ด": "game_data2/live4.png",
-  "เห็ด": "game_data2/live5.png",
-  "สาหร่าย": "game_data2/live6.png",
-  "นก": "game_data2/live7.png",
-  "นกฮูก": "game_data2/live8.png",
-  "อีกา": "game_data2/live9.png",
-  "มด": "game_data2/live10.png",
-  "เต่า": "game_data2/live11.png",
-  "แมลง": "game_data2/live12.png",
-  "วัว": "game_data2/live13.png",
-  "ฉลาม": "game_data2/live14.png",
-  "กุ้ง": "game_data2/live15.png",
-  "ปลาชะโด": "game_data2/live16.png",
-  "ปลา": "game_data2/live17.png",
-  "ปลาหมึก": "game_data2/live18.png",
-  "ปลาไหล": "game_data2/live19.png",
-  "สิงโต": "game_data2/live20.png",
-  "แมงมุม": "game_data2/live21.png",
-  "วาฬ": "game_data2/live22.png",
-  "โลมา": "game_data2/live23.png",
-    "ปลาหมอ": "game_data2/live24.png",
-  "ปลาเก๋า": "game_data2/live25.png",
-  "ลิงกอริล่า": "game_data2/live26.png",
-  "ปลาทูน่า": "game_data2/live27.png",
-  "ม้าลาย": "game_data2/live28.png",
-  "ปู": "game_data2/live29.png",
-  "หอย": "game_data2/live30.png",
-  "ต้นไผ่": "game_data2/live31.png",
-  "จระเข้": "game_data2/live32.png",
-  "งู": "game_data2/live33.png",
-  "นกอินทรี": "game_data2/live34.png",
-  "ฮิปโป": "image/live35.png",
-  "จิ้งจก": "image/live36.png",
-  "กบ": "image/live37.png",
-  "หอยทาก": "image/live38.png",
-  "ผีเสื้อ": "image/live39.png",
-  "ช้าง": "image/live40.png",
-  "ยุง": "image/live41.png",
-  "หนอน": "image/live42.png",
-  "ไส้เดือน": "image/live43.png",
-  "หมีแพนด้า": "image/live44.png",
-  "หมู": "image/live45.png",
-  "ต้นข้าว": "image/live46.png",
-  "เสือ": "image/live47.png",
-  "หนู": "image/live48.png",
-  "ควาย": "image/live49.png",
-  "ต้นกระบองเพชร": "image/live50.png",
-  "หญ้า": "image/live51.png",
-  "กล้วยไม้": "image/live52.png",
-  "ดอกไม้": "image/live53.png",
-  "ผัก": "image/live54.png",
-  "ถั่วงอก": "image/live55.png",
-  "เฟิร์น": "image/live56.png",
-   "คน": "image/live57.png",
+    "ปลาหมอ":     "vertebrates/animal1.png",
+  "ปลาเก๋า":     "vertebrates/animal2.png",
+  "ปลาชะโด":    "vertebrates/animal3.png",
+  "ปลาการ์ตูน":  "vertebrates/animal4.png",
+  "ปลาทูน่า":   "vertebrates/animal5.png",
+  "ปลาไหล":     "vertebrates/animal6.png",
+  "ฉลาม":       "vertebrates/animal7.png",
+  "อึ่งอ่าง":       "vertebrates/animal9.png",
+  "คางคก":         "vertebrates/animal11.png",
+  "กบ":            "vertebrates/animal13.png",
+  "จระเข้":        "vertebrates/animal16.png",
+  "เต่า":          "vertebrates/animal17.png",
+  "จิ้งจก":        "vertebrates/animal18.png",
+  "กิ้งก่า":       "vertebrates/animal19.png",
+  "งู":            "vertebrates/animal20.png",
+  "อิกัวนา":       "vertebrates/animal21.png",
+  "มังกรโคโมโด":   "vertebrates/animal22.png",
+  "ไก่":         "vertebrates/animal24.png",
+  "เป็ด":        "vertebrates/animal25.png",
+  "นก":     "vertebrates/animal26.png",
+  "นกฮูก":       "vertebrates/animal27.png",
+  "อีกา":        "vertebrates/animal28.png",
+  "นกอินทรี":    "vertebrates/animal29.png",
+  "วัว":        "vertebrates/animal34.png",
+  "สิงโต":      "vertebrates/animal35.png",
+  "วาฬ":        "vertebrates/animal36.png",
+  "โลมา":      "vertebrates/animal37.png",
+  "ลิงกอริลา":  "vertebrates/animal38.png",
+  "ม้าลาย":     "vertebrates/animal39.png",
+  "ฮิปโป":     "vertebrates/animal40.png",
+  "ช้าง":       "vertebrates/animal41.png",
+  "หมีแพนด้า":  "vertebrates/animal42.png",
+  "หมู":        "vertebrates/animal43.png",
+  "เสือ":       "vertebrates/animal44.png",
+  "หนู":        "vertebrates/animal45.png",
+  "ควาย":      "vertebrates/animal46.png",
+  "คน":        "vertebrates/animal47.png",
+  "ปลา":        "vertebrates/animal4.png",
 
-  "ก้อนหิน": "game_data/nolive1.png",
-  "ลม": "game_data/nolive2.png",
-  "ดินสอ": "game_data/nolive3.png",
-  "รถยนต์": "game_data/nolive4.png",
-  "โต๊ะ": "game_data/nolive5.png",
-  "ดวงจันทร์": "game_data/nolive6.png",
-  "ทราย": "game_data/nolive7.png",
-  "น้ำแข็ง": "game_data/nolive8.png",
-  "เมฆ": "game_data/nolive9.png",
-  "โทรศัพท์มือถือ": "game_data/nolive10.png",
-  "เอไอ": "game_data/nolive11.png",
-  "พัดลม": "game_data/nolive12.png",
-  "ตู้เย็น": "game_data/nolive13.png",
-  "น้ำ": "game_data/nolive14.png",
-  "หลอดไฟ": "game_data/nolive15.png",
-  "โคลน": "game_data/nolive16.png",
-  "ดวงอาทิตย์": "game_data/nolive17.png",
-  "ขวด": "game_data/nolive18.png",
-  "นาฬิกา": "game_data/nolive19.png",
-  "เหล็ก": "game_data/nolive20.png",
-  "สมุด": "game_data/nolive21.png",
-  "หุ่นยนต์": "game_data/nolive22.png",
-  "ตุ๊กตา": "game_data/nolive23.png",
-  "ขนม": "game_data/nolive24.png",
-  "ดินน้ำมัน": "game_data/nolive25.png",
-  "ทอง": "game_data/nolive26.png",
-  "หม้อหุงข้าว": "game_data/nolive27.png",
-  "ไฟ": "game_data/nolive28.png",
-  "ร่ม": "game_data/nolive29.png",
-  "กระเป๋า": "game_data/nolive30.png",
-  "รองเท้า": "game_data/nolive31.png",
-  "เสื้อผ้า": "game_data/nolive32.png",
-  "จักรยาน": "game_data/nolive33.png",
-  "ไฟฟ้า": "game_data/nolive34.png",
-  "รถไฟ": "game_data/nolive35.png",
-  "เครื่องบิน": "game_data/nolive36.png",
-  "เรือ": "game_data/nolive37.png",
-  "สะพาน": "game_data/nolive38.png",
-  "บ้าน": "game_data/nolive39.png",
-  "ยางรถ": "game_data/nolive40.png",
-  "กระจก": "game_data/nolive41.png",
-  "หนังสือ": "game_data/nolive42.png",
-  "ลูกบอล": "game_data/nolive43.png",
-  "ขนมปัง": "game_data/nolive44.png",
-  "หิมะ": "game_data/nolive45.png",
-  "กีตาร์": "game_data/nolive46.png",
-  "เปียโน": "game_data/nolive47.png",
-  "กล้อง": "game_data/nolive48.png"
+  "หอยทาก":      "invertebrates/animal48.png",
+  "ผีเสื้อ":      "invertebrates/animal49.png",
+  "ยุง":          "invertebrates/animal50.png",
+  "หนอน":        "invertebrates/animal51.png",
+  "ไส้เดือน":     "invertebrates/animal52.png",
+  "หอย":         "invertebrates/animal53.png",
+  "มด":          "invertebrates/animal54.png",
+  "แมลง":  "invertebrates/animal55.png",
+  "กุ้ง":         "invertebrates/animal56.png",
+  "ปลาหมึก":     "invertebrates/animal57.png",
+  "แมงมุม":       "invertebrates/animal58.png",
+  "ปู":          "invertebrates/animal59.png",
+  "ตุ๊กแก":       "invertebrates/animal60.png",
+  "ดาวทะเล":     "invertebrates/animal61.png",
+  "เม่นทะเล":     "invertebrates/animal62.png",
+  "ตะขาบ":       "invertebrates/animal67.png",
+  "เห็ด":            "invertebrates/animal69.png",
+  "เห็ดนางรม":       "invertebrates/animal75.png",
+
+  "ต้นไม้":          "image/plant1.png",
+  "สาหร่าย":        "image/plant2.png",
+  "ต้นไผ่":         "image/plant3.png",
+  "ถั่วงอก":        "image/plant5.png",
+  "ผัก":            "image/plant6.png",
+  "หญ้า":          "image/plant7.png",
+  "ต้นกระบองเพชร":  "image/plant8.png",
+  "ต้นข้าว":        "image/plant9.png",
+  "กล้วยไม้":       "image/plant10.png",
+  "ต้นดอกทานตะวัน": "image/plant11.png",
+  "ต้นสน":          "image/plant12.png",
+  "ต้นกล้วย":       "image/plant13.png",
+  "ดอกบัว":         "image/plant16.png",
+  "ต้นถั่ว":        "image/plant22.png",
+  "กุหลาบ":        "image/plant23.png",
+  "ไข่ผำ":          "image/plant25.png",
+
+  "ก้อนหิน": "vertebrates/nolive1.png",
+  "ลม": "vertebrates/nolive2.png",
+  "ดินสอ": "vertebrates/nolive3.png",
+  "รถยนต์": "vertebrates/nolive4.png",
+  "โต๊ะ": "vertebrates/nolive5.png",
+  "ทราย": "vertebrates/nolive6.png",
+  "ดวงจันทร์": "vertebrates/nolive7.png",
+  "น้ำแข็ง": "vertebrates/nolive8.png",
+  "เมฆ": "vertebrates/nolive9.png",
+  "โทรศัพท์มือถือ": "vertebrates/nolive10.png",
+  "เอไอ": "image/nolive11.png",
+  "พัดลม": "image/nolive12.png",
+  "ตู้เย็น": "image/nolive13.png",
+  "น้ำ": "image/nolive14.png",
+  "หลอดไฟ": "image/nolive15.png",
+  "โคลน": "image/nolive16.png",
+  "ดวงอาทิตย์": "image/nolive17.png",
+  "ขวด": "image/nolive18.png",
+  "นาฬิกา": "image/nolive19.png",
+  "เหล็ก": "image/nolive20.png",
+  "สมุด": "invertebrates/nolive21.png",
+  "หุ่นยนต์": "invertebrates/nolive22.png",
+  "ตุ๊กตา": "invertebrates/nolive23.png",
+  "ขนม": "invertebrates/nolive24.png",
+  "ดินน้ำมัน": "invertebrates/nolive25.png",
+  "ทอง": "invertebrates/nolive26.png",
+  "หม้อหุงข้าว": "invertebrates/nolive27.png",
+  "ไฟ": "invertebrates/nolive28.png",
+  "ร่ม": "invertebrates/nolive29.png",
+  "กระเป๋า": "invertebrates/nolive30.png",
+  "รองเท้า": "invertebrates/nolive31.png",
+  "เสื้อผ้า": "invertebrates/nolive32.png",
+  "จักรยาน": "invertebrates/nolive33.png",
+  "ไฟฟ้า": "invertebrates/nolive34.png",
+  "รถไฟ": "invertebrates/nolive35.png",
+  "เครื่องบิน": "invertebrates/nolive36.png",
+  "เรือ": "invertebrates/nolive37.png",
+  "สะพาน": "invertebrates/nolive38.png",
+  "บ้าน": "invertebrates/nolive39.png",
+  "ยางรถ": "invertebrates/nolive40.png",
+  "กระจก": "invertebrates/nolive41.png",
+  "หนังสือ": "invertebrates/nolive42.png",
+  "ลูกบอล": "invertebrates/nolive43.png",
+  "ขนมปัง": "invertebrates/nolive44.png",
+  "หิมะ": "invertebrates/nolive45.png",
+  "กีตาร์": "invertebrates/nolive46.png",
+  "เปียโน": "invertebrates/nolive47.png",
+  "กล้อง": "invertebrates/nolive48.png"
 };
 
 /* ===== Image Preload (batched + retry + progress) ===== */
@@ -1613,7 +1514,7 @@ function bindPreloadProgress(){
   return (ratio)=>{
     const pct = Math.round(ratio*100);
     if (bar)  bar.style.width = pct + '%';
-    if (text) text.textContent = `กำลังเตรียมแอสเซ็ต… ${pct}%`;
+    if (text) text.textContent = `กำลังเตรียมข้อมูล… ${pct}%`;
   };
 }
 
@@ -1628,37 +1529,27 @@ async function runGlobalPreload(){
     window.__ALL_IMAGES_READY__ = true;
   }
 }
-// เริ่มพรีโหลดทันทีที่หน้าโหลดเสร็จ
+
+// เริ่มพรีโหลดทันทีที่หน้าโหลดเสร็จ (อยู่นอกทุกฟังก์ชัน)
 window.addEventListener('load', ()=> { runGlobalPreload(); });
-
-enterBtn.addEventListener('click', async ()=>{
-  // ถ้าโหลดยังไม่เสร็จ ให้รอสั้น ๆ ถึงจะเข้าเมนูได้
-  while (!window.__ALL_IMAGES_READY__) {
-    await new Promise(r=>setTimeout(r, 120));
-  }
-  welcome.classList.add('hide');
-  landing.classList.remove('hide');
-  bgm?.play?.().catch(()=>{});
-});
-
 
 /* ===== [LEVEL 1] คลังคำถามแบบ “สิ่งมีชีวิตต้องการอะไร?” 2 ช้อยส์ =====
    ใส่ได้กี่ข้อก็ได้ รูปจะอ้างจาก FIXED_IMG_MAP ตามชื่อ prompt
    choices: [ตัวเลือกซ้าย, ตัวเลือกขวา], correct: index ที่ถูก (0 หรือ 1)
 */
 const NEEDS_BANK = [
-  { prompt:"ต้นไม้", tag:"living", choices:["แสงแดด","เสียงเพลง"], correct:0 },
+   { prompt:"ต้นไม้", tag:"living", choices:["แสงแดด","เสียงเพลง"], correct:0 },
   { prompt:"กิ้งก่า", tag:"living", choices:["แมลง","หญ้า"], correct:0 },
   { prompt:"ไก่", tag:"living", choices:["น้ำ","เสื้อผ้า"], correct:0 },
   { prompt:"เป็ด", tag:"living", choices:["น้ำ","โคลน"], correct:0 },
-  { prompt:"สาหร่าย", tag:"living", choices:["แสงแดด","ยาฆ่าแมลง"], correct:0 },
+  { prompt:"สาหร่าย", tag:"living", choices:["แสงแดด","ปุ๋ยเคมี"], correct:0 },
   { prompt:"นก", tag:"living", choices:["เมล็ดพืช","ทราย"], correct:0 },
   { prompt:"มด", tag:"living", choices:["เศษอาหาร","เหล้า"], correct:0 },
   { prompt:"เต่า", tag:"living", choices:["อากาศ","น้ำแข็ง"], correct:0 },
-  { prompt:"แมลง", tag:"living", choices:["อาหาร","พลาสติก"], correct:0 },
+  { prompt:"แมลง", tag:"living", choices:["น้ำหวาน","พลาสติก"], correct:0 },
   { prompt:"วัว", tag:"living", choices:["หญ้า","เนื้อ"], correct:0 },
-  { prompt:"ฉลาม", tag:"living", choices:["ปลา","สาหร่าย"], correct:0 },
-  { prompt:"กุ้ง", tag:"living", choices:["น้ำ","แป้ง"], correct:0 },
+  { prompt:"ฉลาม", tag:"living", choices:["ปลาเล็ก","สาหร่าย"], correct:0 },
+  { prompt:"กุ้ง", tag:"living", choices:["น้ำทะเล","แป้ง"], correct:0 },
   { prompt:"ปลาชะโด", tag:"living", choices:["ปลาเล็ก","ก้อนหิน"], correct:0 },
   { prompt:"ปลา", tag:"living", choices:["ออกซิเจน","เหล็ก"], correct:0 },
   { prompt:"ปลาหมึก", tag:"living", choices:["น้ำทะเล","แสงแดด"], correct:0 },
@@ -1668,12 +1559,12 @@ const NEEDS_BANK = [
   { prompt:"วาฬ", tag:"living", choices:["แพลงก์ตอน","น้ำแข็ง"], correct:0 },
   { prompt:"โลมา", tag:"living", choices:["ปลาเล็ก","ขนมกรอบ"], correct:0 },
   { prompt:"ปลาหมอ", tag:"living", choices:["อากาศ","ใบไม้"], correct:0 },
-  { prompt:"ลิงกอริล่า", tag:"living", choices:["ผลไม้","ต้นไม้"], correct:0 },
-  { prompt:"ปลาทูน่า", tag:"living", choices:["ออกซิเจน","ผลไม้"], correct:0 },
+  { prompt:"ลิงกอริล่า", tag:"living", choices:["ผลไม้สุก","ถุงมือหนัง"], correct:0 },
+  { prompt:"ปลาทูน่า", tag:"living", choices:["ปลาขนาดเล็ก","ผลไม้"], correct:0 },
   { prompt:"ม้าลาย", tag:"living", choices:["หญ้า","นักท่องเที่ยว"], correct:0 },
-  { prompt:"ปู", tag:"living", choices:["น้ำ","กะลา"], correct:0 },
+  { prompt:"ปู", tag:"living", choices:["น้ำ","เชือกฟาง"], correct:0 },
   { prompt:"หอย", tag:"living", choices:["อากาศ","แสงแดด"], correct:0 },
-  { prompt:"ต้นไผ่", tag:"living", choices:["ธาตุอาหาร","สีทา"], correct:0 },
+  { prompt:"ต้นไผ่", tag:"living", choices:["แสงแดด","สีทา"], correct:0 },
   { prompt:"จระเข้", tag:"living", choices:["เนื้อสัตว์","พงหญ้า"], correct:0 },
   { prompt:"งู", tag:"living", choices:["หนู","ดอกไม้"], correct:0 },
   { prompt:"นกอินทรี", tag:"living", choices:["ปลา","เงิน"], correct:0 },
@@ -1690,24 +1581,226 @@ const NEEDS_BANK = [
   { prompt:"หมู", tag:"living", choices:["ผัก","เสียงเพลง"], correct:0 },
   { prompt:"ต้นข้าว", tag:"living", choices:["แสงแดด","รถไถ"], correct:0 },
   { prompt:"เสือ", tag:"living", choices:["เนื้อสัตว์","แชมพู"], correct:0 },
-  { prompt:"หนู", tag:"living", choices:["ธัญพืช","น้ำผึ้ง"], correct:0 },
+  { prompt:"หนู", tag:"living", choices:["ธัญพืช","ชีส"], correct:0 },
   { prompt:"ควาย", tag:"living", choices:["หญ้า","แปรงสีฟัน"], correct:0 },
-  { prompt:"ต้นกระบองเพชร", tag:"living", choices:["ธาตุอาหาร","ทราย"], correct:0 },
+  { prompt:"ต้นกระบองเพชร", tag:"living", choices:["แสงแดด","ก้อนหิน"], correct:0 },
   { prompt:"หญ้า", tag:"living", choices:["แสงแดด","วัว"], correct:0 },
   { prompt:"กล้วยไม้", tag:"living", choices:["น้ำ","กระถาง"], correct:0 },
-  { prompt:"ดอกไม้", tag:"living", choices:["แสงแดด","กระถาง"], correct:0 },
+  { prompt:"ต้นดอกทานตะวัน", tag:"living", choices:["แสงแดด","กระถาง"], correct:0 },
   { prompt:"ผัก", tag:"living", choices:["น้ำ","ยาฆ่าแมลง"], correct:0 },
   { prompt:"ถั่วงอก", tag:"living", choices:["น้ำ","ไฟ"], correct:0 },
-  { prompt:"เฟิร์น", tag:"living", choices:["แสงแดด","ก้อนหิน"], correct:0 },
   { prompt:"คน", tag:"living", choices:["น้ำ","บ้าน"], correct:0 },
   { prompt:"คน", tag:"living", choices:["อาหาร","โทรทัศน์"], correct:0 },
   { prompt:"คน", tag:"living", choices:["อากาศ","อินเทอร์เน็ต"], correct:0 },
   { prompt:"คน", tag:"living", choices:["ผลไม้","เสื้อผ้า"], correct:0 },
   { prompt:"คน", tag:"living", choices:["น้ำ","รถ"], correct:0 },
   { prompt:"คน", tag:"living", choices:["อาหาร","เพลง"], correct:0 },
-  { prompt:"คน", tag:"living", choices:["น้ำ","หนังสือ"], correct:0 },
+  { prompt:"คน", tag:"living", choices:["อากาศ","หนังสือ"], correct:0 },
   { prompt:"คน", tag:"living", choices:["เนื้อสัตว์","บุหรี่"], correct:0 },
+  { prompt:"หนู",      choices:["อากาศ","ท่อ"], correct:0 },
+  { prompt:"ควาย",          choices:["อากาศ","เชือก"], correct:0 },
+  { prompt:"ต้นกระบองเพชร",   choices:["ธาตุอาหาร","แมลง"], correct:0 },
+    { prompt:"ไข่ผำ",      choices:["แสงแดด","ตาข่าย"], correct:0 },
+    { prompt:"ต้นถั่ว",      choices:["สารเคมี","น้ำ"], correct:1 },
+    { prompt:"กุหลาบ",      choices:["สี","ธาตุอาหาร"], correct:1 },
+    { prompt:"ดอกบัว",      choices:["พระ","อากาศ"], correct:1 },
+    { prompt:"ต้นกล้วย",      choices:["น้ำ","คนปลูก"], correct:0 },
+    { prompt:"ต้นสน",      choices:["หิมะ","อากาศ"], correct:1 },
+    { prompt:"ดาวทะเล",      choices:["ปะการัง","อาหาร"], correct:1 },
+    { prompt:"เม่นทะเล",      choices:["ออกซิเจน","ไฟฟ้า"], correct:0 },
+    { prompt:"อิกัวน่า",      choices:["น้ำ","แสงแดด"], correct:0 },
+
 ];
+
+// ===  "ด่าน 1" สิ่งมีชีวิต 3 อย่าง ===
+const LEVEL1_BANK = [
+  { prompt:"ต้นไม้",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"กิ้งก่า",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ไก่",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"เป็ด",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"เห็ด",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"สาหร่าย", choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"นก",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"นกฮูก",   choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"อีกา",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"มด",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"เต่า",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"แมลง",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"วัว",       choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ฉลาม",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"กุ้ง",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ปลาชะโด",   choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ปลา",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ปลาหมึก",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ปลาไหล",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"สิงโต",        choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"แมงมุม",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"วาฬ",       choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"โลมา",       choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ปลาหมอ",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ปลาเก๋า",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ลิงกอริล่า",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ปลาทูน่า",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ม้าลาย",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ปู",         choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"หอย",        choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ต้นไผ่",       choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"จระเข้",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"งู",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"นกอินทรี",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ฮิปโป",         choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"จิ้งจก",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"กบ",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"หอยทาก",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ผีเสื้อ",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ช้าง",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ยุง",       choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"หนอน",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ไส้เดือน",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"หมีแพนด้า",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"หมู",         choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ต้นข้าว",       choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"เสือ",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"หนู",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ควาย",          choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ต้นกระบองเพชร",   choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"หญ้า",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"กล้วยไม้",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ต้นดอกทานตะวัน",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ผัก",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+  { prompt:"ถั่วงอก",    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"คน",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"ไข่ผำ",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"ต้นถั่ว",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"กุหลาบ",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"ดอกบัว",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"ต้นกล้วย",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"ต้นสน",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"เห็ดนางรม",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"ดาวทะเล",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"เม่นทะเล",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+    { prompt:"อิกัวน่า",      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:1 },
+
+  { prompt:"ก้อนหิน",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ลม",   choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ดินสอ",         choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"รถยนต์",        choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"โต๊ะ", 	   choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ทราย",           choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ดวงจันทร์",       choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"น้ำแข็ง",     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"เมฆ",          choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"โทรศัพท์มือถือ",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"เอไอ",                 choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"พัดลม",            choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ตู้เย็น",              choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"น้ำ",                 choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"หลอดไฟ",           choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"โคลน",               choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ดวงอาทิตย์",        choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ขวด",              choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"นาฬิกา",            choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"เหล็ก",                 choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"สมุด",                   choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"หุ่นยนต์",              choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ตุ๊กตา",                  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ขนม",                    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ดินน้ำมัน",               choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ทอง",                        choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"หม้อหุงข้าว",                choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ไฟ",                           choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ร่ม",                           choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"กระเป๋า",                     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"รองเท้า",                    choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"เสื้อผ้า",                     choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"จักรยาน",                   choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ไฟฟ้า",                        choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"รถไฟ",                      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"เครื่องบิน",                 choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"เรือ",                          choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"สะพาน",                      choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"บ้าน",                         choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ยางรถ",                 choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"กระจก",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"หนังสือ",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ลูกบอล",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"ขนมปัง",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"หิมะ",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"กีตาร์",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"เปียโน",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+  { prompt:"กล้อง",  choices:["สิ่งไม่มีชีวิต","สิ่งมีชีวิต"], correct:0 },
+
+];
+
+const LEVEL3_BANK = [
+    { prompt:"ปลาหมอ", choices:["กลุ่มปลา","สะเทินน้ำสะเทินบก"], correct:0 },
+    { prompt:"ปลาเก๋า", choices:["กลุ่มปลา","สะเทินน้ำสะเทินบก"], correct:0 },
+    { prompt:"ปลาชะโด", choices:["กลุ่มปลา","สัตว์นักล่า"], correct:0 },
+    { prompt:"ปลาการ์ตูน", choices:["สัตว์เลี้ยง","กลุ่มปลา"], correct:1 },
+    { prompt:"ปลาทูน่า", choices:["สัตว์เลื้อยคลาน","กลุ่มปลา"], correct:1 },
+    { prompt:"ปลาไหล", choices:["สัตว์เลื้อยคลาน","กลุ่มปลา"], correct:1 },
+    { prompt:"ฉลาม", choices:["กลุ่มปลา","สัตว์นักล่า"], correct:0 },
+    { prompt:"ปลาทอง", choices:["สัตว์เลี้ยง","กลุ่มปลา"], correct:1 },
+ 
+    { prompt:"อึ่งอ่าง", choices:["สัตว์เลื้อยคลาน","สะเทินน้ำสะเทินบก"], correct:1 },
+        { prompt:"ซาลาแมนเดอร์", choices:["สะเทินน้ำสะเทินบก","สัตว์เลื้อยคลาน"], correct:0 }, 
+        { prompt:"คางคก", choices:["สะเทินน้ำสะเทินบก","สัตว์เลื้อยคลาน"], correct:0 }, 
+    { prompt:"เขียด", choices:["สะเทินน้ำสะเทินบก","กลุ่มปลา"], correct:0 }, 
+    { prompt:"กบ", choices:["สะเทินน้ำสะเทินบก","กลุ่มปลา"], correct:1 }, 
+        { prompt:"แอกโซลอเติล", choices:["สะเทินน้ำสะเทินบก","กลุ่มปลา"], correct:0 }, 
+        { prompt:"เขียดงู", choices:["สะเทินน้ำสะเทินบก","สัตว์เลื้อยคลาน"], correct:0 }, 
+
+        { prompt:"จระเข้", choices:["สะเทินน้ำสะเทินบก","สัตว์เลื้อยคลาน"], correct:1 }, 
+        { prompt:"เต่า", choices:["กลุ่มปลา","สัตว์เลื้อยคลาน"], correct:1 }, 
+    { prompt:"จิ้งจก", choices:["สัตว์เลี้ยงลูกด้วยนม","สัตว์เลื้อยคลาน"], correct:1 }, 
+    { prompt:"กิ้งก่า", choices:["สะเทินน้ำสะเทินบก","สัตว์เลื้อยคลาน"], correct:1 },
+        { prompt:"มังกรโคโมโด", choices:["สัตว์กินเนื้อ","สัตว์เลื้อยคลาน"], correct:1 },
+    { prompt:"ตัวเงินตัวทอง", choices:["สัตว์เลื้อยคลาน","สะเทินน้ำสะเทินบก"], correct:0 },
+    { prompt:"งู", choices:["สัตว์เลื้อยคลาน","สะเทินน้ำสะเทินบก"], correct:0 },
+    { prompt:"อิกัวนา", choices:["สัตว์เลื้อยคลาน","สะเทินน้ำสะเทินบก"], correct:0 },
+
+        { prompt:"ไก่", choices:["สัตว์ปีก","สะเทินน้ำสะเทินบก"], correct:0 },
+        { prompt:"เป็ด", choices:["สัตว์ปีก","สะเทินน้ำสะเทินบก"], correct:0 },
+    { prompt:"นกพิราบ", choices:["สัตว์บก","สัตว์ปีก"], correct:1 },
+        { prompt:"นกฮูก", choices:["สัตว์กลางคืน","สัตว์ปีก"], correct:1 },
+        { prompt:"อีกา", choices:["สัตว์เลื้อยคลาน","สัตว์ปีก"], correct:1 },
+        { prompt:"นกอินทรี", choices:["สัตว์นักล่า","สัตว์ปีก"], correct:1 },
+    { prompt:"นกกระจอกเทศ", choices:["สัตว์บก","สัตว์ปีก"], correct:1 },
+        { prompt:"นกฟลามิงโก", choices:["สัตว์ปีก","สะเทินน้ำสะเทินบก"], correct:0 },
+        { prompt:"นกเงือก", choices:["กลุ่มปลา","สัตว์ปีก"], correct:1 },
+        { prompt:"นกแก้ว", choices:["สัตว์เลี้ยงลูกด้วยนม","สัตว์ปีก"], correct:1 },
+
+        { prompt:"วัว", choices:["สัตว์เลี้ยงลูกด้วยนม","สัตว์กินพืช"], correct:0 },
+        { prompt:"สิงโต", choices:["สัตว์เลี้ยงลูกด้วยนม","สัตว์นักล่า"], correct:0 },
+        { prompt:"วาฬ", choices:["สัตว์เลี้ยงลูกด้วยนม","กลุ่มปลา"], correct:0 },
+        { prompt:"โลมา", choices:["กลุ่มปลา","สัตว์เลี้ยงลูกด้วยนม"], correct:1 }, 
+        { prompt:"ลิงกอริลา", choices:["สัตว์เลี้ยงลูกด้วยนม","สัตว์กินพืช"], correct:1 },
+        { prompt:"ม้าลาย", choices:["สัตว์เลี้ยงลูกด้วยนม","สัตว์กินพืช"], correct:1 },
+        { prompt:"ฮิปโป", choices:["สัตว์เลี้ยงลูกด้วยนม","สะเทินน้ำสะเทินบก"], correct:0 },
+        { prompt:"ช้าง", choices:["สัตว์เลี้ยงลูกด้วยนม","สะเทินน้ำสะเทินบก"], correct:0 },
+        { prompt:"หมีแพนด้า", choices:["สัตว์เลื้อยคลาน","สัตว์เลี้ยงลูกด้วยนม"], correct:1 }, 
+        { prompt:"หมู", choices:["สัตว์เลื้อยคลาน","สัตว์เลี้ยงลูกด้วยนม"], correct:1 }, 
+        { prompt:"เสือ", choices:["สัตว์หากินกลางคืน","สัตว์เลี้ยงลูกด้วยนม"], correct:1 }, 
+        { prompt:"หนู", choices:["สัตว์หากินกลางคืน","สัตว์เลี้ยงลูกด้วยนม"], correct:1 }, 
+        { prompt:"ควาย", choices:["สัตว์เลี้ยงลูกด้วยนม","สะเทินน้ำสะเทินบก"], correct:0 },
+        { prompt:"คน", choices:["สัตว์เลี้ยงลูกด้วยนม","สะเทินน้ำสะเทินบก"], correct:0 },
+        { prompt:"คน", choices:["สัตว์เลื้อยคลาน","สัตว์เลี้ยงลูกด้วยนม"], correct:1 }, 
+];
+
+(function attachLevel1Images(){
+  for (const q of LEVEL1_BANK){
+    const img = FIXED_IMG_MAP[q.prompt];
+    if (img) q.img = img;
+  }
+})();
+
+(function attachLevel3Images(){
+  for (const q of LEVEL3_BANK){
+    const img = FIXED_IMG_MAP[q.prompt];
+    if (img) q.img = img;
+  }
+})();
+
 
 // ผูกรูปภาพอัตโนมัติให้ NEEDS_BANK (ถ้ามีใน FIXED_IMG_MAP)
 (function attachNeedsImages(){
@@ -1718,64 +1811,49 @@ const NEEDS_BANK = [
 })();
 
 
-(function attachImages(){
-  let liveN = 1, nonN = 1;
-
-  for (const q of QUESTION_BANK) {
-    // ถ้าข้อนี้กำหนดไฟล์รูปไว้ชัดเจน → ใช้นั้นเลย
-    if (FIXED_IMG_MAP[q.prompt]) {
-      q.img = FIXED_IMG_MAP[q.prompt];
-      continue;
-    }
-
-    // ไม่ได้กำหนดรูป → ใช้เลขรันตามหมวด
-    if (q.tag === 'living') {
-      q.img = `image/live${liveN++}.png`;
-    } else {
-      q.img = `image/nolive${nonN++}.png`;
-    }
-  }
-})();
-
-
-let __order=[], __idx=0;
-let __orderL1=[], __idxL1=0;
+let __orderL1=[], __idxL1=0; // ด่าน 1 : LEVEL1_BANK
+let __orderL2=[], __idxL2=0; // ด่าน 2 : NEEDS_BANK
+let __orderL3=[], __idxL3=0; // ด่าน 3 : LEVEL3_BANK
 
 function drawQuestion(){
-  if (window.currentLevel === 0){
-    // ด่านเดิม: มี/ไม่มีชีวิต
-    if(!__order.length || __idx>=__order.length){
-      __order = shuffle([...Array(QUESTION_BANK.length).keys()]);
-      __idx = 0;
-    }
-    const raw = QUESTION_BANK[ __order[__idx++] ];
-    console.log('[L0]', raw.prompt, '->', raw.img);
-    return { mode:0, question: raw.prompt, correctTag: raw.tag, img: raw.img };
-  } else {
-    // ด่านใหม่: 2 ช้อยส์ตามข้อ
+  if (window.currentLevel === 1){
     if(!__orderL1.length || __idxL1>=__orderL1.length){
-      __orderL1 = shuffle([...Array(NEEDS_BANK.length).keys()]);
+      __orderL1 = shuffle([...Array(LEVEL1_BANK.length).keys()]);
       __idxL1 = 0;
     }
-    const raw = NEEDS_BANK[ __orderL1[__idxL1++] ];
-    console.log('[L1]', raw.prompt, '->', raw.img, raw.choices);
+    const raw = LEVEL1_BANK[__orderL1[__idxL1++]];
+    return { mode:1, question: raw.prompt, img: raw.img, choices: raw.choices, correctIndex: raw.correct };
+
+  } else if (window.currentLevel === 2){
+    if(!__orderL2.length || __idxL2>=__orderL2.length){
+      __orderL2 = shuffle([...Array(NEEDS_BANK.length).keys()]);
+      __idxL2 = 0;
+    }
+    const raw = NEEDS_BANK[__orderL2[__idxL2++]];
+    return { mode:1, question: raw.prompt, img: raw.img, choices: raw.choices, correctIndex: raw.correct };
+
+  } else if (window.currentLevel === 3){
+    if(!__orderL3.length || __idxL3>=__orderL3.length){
+      __orderL3 = shuffle([...Array(LEVEL3_BANK.length).keys()]);
+      __idxL3 = 0;
+    }
+    const raw = LEVEL3_BANK[__orderL3[__idxL3++]];
     return { mode:1, question: raw.prompt, img: raw.img, choices: raw.choices, correctIndex: raw.correct };
   }
 }
 
+
 function nextRound(){
-    if (!canSpawn()) return; 
+    if (ended) return;   // ❗ ถ้าจบเกมแล้ว ไม่ต้องสร้างรอบใหม่
   clearRoundObjects(); awaitingAnswer=false; stopTimebar();
   qBox.textContent='';
 
   setTimeout(()=>{
-        if (!canSpawn()) return;
     const q = drawQuestion();
     dropQuestion(q.question, q.img);
 
-  setTimeout(()=>{
-         if (!canSpawn()) return;
-     if (q.mode === 0){
+    setTimeout(()=>{
+      if (q.mode === 0){
         // ด่านเดิม
         spawnTwoCircles(q.correctTag);
       } else {
@@ -1793,20 +1871,28 @@ function startRoundTimer(){
   awaitingAnswer = true;
 }
 
-  function startGame(){
-    document.body.classList.remove('prestart');
-    document.body.classList.add('in-game');   // ✅ แสดง HUD เมื่อเริ่มเล่นจริง
-    running=true; ended=false; paused=false;
-    overlay.style.visibility='hidden'; overlay.style.opacity='0';
-    score=0; round=0; updateHUD();
-        startGameTimer(); // [เพิ่มใหม่] เริ่มจับเวลาทั้งด่าน 2 นาที
-    nextRound();
+async function startGame(){
+  // รอให้พรีโหลดประกาศพร้อม
+  while (!window.__ALL_IMAGES_READY__) {
+    await new Promise(r => setTimeout(r, 120));
   }
+
+  document.body.classList.remove('prestart');
+  document.body.classList.add('in-game');
+  running=true; ended=false; paused=false;
+  window.ended = ended;
+  overlay.style.visibility='hidden'; overlay.style.opacity='0';
+  score=0; round=0; updateHUD();
+  startGameTimer();     // เดิมมีอยู่แล้ว
+  nextRound();          // เดิมมีอยู่แล้ว
+}
+
 
   // ======== จบด่าน (แก้ใหม่: หยุดสนามเกมทั้งหมดเมื่อสรุปคะแนน) ========
   function endLevel(){
         clearCountdown();
     ended = true;
+        window.ended = ended; // ✅ อัปเดตค่า global
     running = false;
     clearGameTimer();
     stopClockUI();
@@ -1864,7 +1950,7 @@ function pauseGame(){
   
 
 document.getElementById('quickRestart')?.addEventListener('click', ()=>{
-        clearCountdown();
+      clearCountdown();
     document.body.classList.remove('prestart');
     restorePlayfield();   // ✅ คืนสนามเกม
     overlay.style.visibility='hidden';
@@ -1892,7 +1978,7 @@ document.getElementById('quickRestart')?.addEventListener('click', ()=>{
 
 
   selectLevelBtn.addEventListener('click', ()=>{
-        clearCountdown();
+          clearCountdown();
     document.body.classList.remove('prestart');
     restorePlayfield();   // ✅ คืนสนามเกม
     overlay.style.visibility='hidden';
@@ -1909,6 +1995,7 @@ document.getElementById('quickRestart')?.addEventListener('click', ()=>{
   const startScreen  = document.getElementById('startScreen');
   const startBtn     = document.getElementById('startBtn');
   const countdownEl  = document.getElementById('countdown');
+
 let countdownItv = null;
 function clearCountdown(){
   if (countdownItv){
@@ -1924,11 +2011,11 @@ function clearCountdown(){
 
 
   function openStart(autoCountdown=true){
-        clearCountdown(); 
-    document.body.classList.add('prestart');   
+  clearCountdown();
+    document.body.classList.add('prestart');  
     startScreen.style.display='flex';
   
-    if (autoCountdown) {
+if (autoCountdown) {
   let n = 3;
   countdownEl.textContent = n;
   countdownEl.style.display = 'block';
@@ -1945,17 +2032,19 @@ function clearCountdown(){
     }
   }, 1000);
 }
- else {
+
+    else {
       startBtn.disabled=false; startBtn.style.pointerEvents='auto';
       startBtn.style.display='inline-block'; countdownEl.style.display='none';
     }
   }
   startBtn?.addEventListener('click', ()=>{
-         clearCountdown();
+      clearCountdown(); 
     if(startBtn.disabled) return;
     startBtn.disabled=true; startBtn.style.pointerEvents='none';
     startBtn.style.display='none';
-    let n = 3;
+    
+let n = 3;
 countdownEl.textContent = n;
 countdownEl.style.display = 'block';
 
@@ -1975,16 +2064,6 @@ countdownItv = setInterval(() => {
 
   });
 
-document.querySelectorAll('.levelBtn').forEach(btn=>{
-  if(btn.id==='guideBtn') return;
-  btn.addEventListener('click', ()=>{
-    const lv = Number(btn.dataset.level || 0);
-    document.body.classList.remove('prestart'); // กันไว้ก่อน
-    currentLevel = (lv===1)?1:0;
-    document.getElementById('landing').classList.add('hide');
-    openStart(false);
-  });
-});
 
   document.getElementById('guideBtn')?.addEventListener('click', ()=>{ document.getElementById('landing').classList.add('hide'); document.getElementById('guideScreen').style.display='flex' });
   document.getElementById('guideBack')?.addEventListener('click', ()=>{ document.getElementById('guideScreen').style.display='none'; document.getElementById('landing').classList.remove('hide') });
@@ -2016,7 +2095,10 @@ document.querySelectorAll('.levelBtn').forEach(btn=>{
   if(!SR){ micBtn.textContent='🎤 ไม่รองรับ'; micBtn.disabled=true; return }
   const rec = new SR(); rec.lang='th-TH'; rec.continuous=true; rec.interimResults=true;
   function tokensFrom(s){ s=(s||'').toLowerCase().trim(); s=s.replace(/\s*(ค่ะ|ครับ|คะ|ฮะ)$/,''); return s.split(/[\s,，。\.!?:;、]+/).filter(Boolean) }
-  function currentOptionsMap(){ const map=new Map(); document.querySelectorAll('.option').forEach(n=>{ const t=(n.textContent||'').trim().toLowerCase(); if(!map.has(t)) map.set(t,[]); map.get(t).push(n) }); return map }
+  function currentOptionsMap(){ const map=new Map(); 
+
+document.querySelectorAll('.option').forEach(n=>{ 
+     const t=(n.textContent||'').trim().toLowerCase(); if(!map.has(t)) map.set(t,[]); map.get(t).push(n) }); return map }
   function pickNearest(arr){ return arr[0] }
   function tryFire(phrase){ const toks=tokensFrom(phrase); if(!toks.length) return false; const cmap=currentOptionsMap(); for(const t of toks){ if(cmap.has(t)){ const node = pickNearest(cmap.get(t)); node?.click(); return true } } return false }
   rec.onresult=(e)=>{ for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i]; const txt=(r[0]?.transcript||'').trim(); if(!txt) continue; tryFire(txt) } };
@@ -2052,7 +2134,21 @@ function circleIntersectsRect(cx,cy,r, rc){
  	return (dx*dx+dy*dy)<=r*r 
 }
 
-function hitByCircle(center, r){ const opts=[...document.querySelectorAll('.option')]; for(const n of opts){ const rc=n.getBoundingClientRect(); if(circleIntersectsRect(center.x,center.y,r,rc)){ const t=performance.now(); const last=lastHitAt.get(n)||0; if(t-last<HIT_LOCK_MS) continue; lastHitAt.set(n,t); n.click() } } }
+function hitByCircle(center, r){
+  if (window.ended) return;   // ✅ เช็ค global แทน
+  const opts = [...document.querySelectorAll('.option')];
+  for (const n of opts){
+    const rc = n.getBoundingClientRect();
+    if (circleIntersectsRect(center.x, center.y, r, rc)){
+      const t = performance.now();
+      const last = lastHitAt.get(n) || 0;
+      if (t - last < HIT_LOCK_MS) continue;
+      lastHitAt.set(n, t);
+      n.click();
+    }
+  }
+}
+
 
 async function ensureLandmarker(){ if(landmarker) return landmarker; const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"); landmarker = await PoseLandmarker.createFromOptions(fileset, { baseOptions:{ modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task" }, runningMode:'VIDEO', numPoses:1, minPoseDetectionConfidence:.35, minPosePresenceConfidence:.35, minTrackingConfidence:.35 }); return landmarker }
 function drawHandBall(elbowIdx, wristIdx, lm){ if(!lm[elbowIdx]||!lm[wristIdx]) return null; const elbow = mapToScreen(lm[elbowIdx].x, lm[elbowIdx].y); const wrist = mapToScreen(lm[wristIdx].x, lm[wristIdx].y); const r=24; const L=Math.max(1, Math.hypot(wrist.x-elbow.x, wrist.y-elbow.y)); const ux=(wrist.x-elbow.x)/L, uy=(wrist.y-elbow.y)/L; const HAND_PUSH=1.5, PUSH_PX=6; const center={ x: wrist.x + ux*(r*HAND_PUSH+PUSH_PX), y: wrist.y + uy*(r*HAND_PUSH+PUSH_PX) }; if(SHOW_HAND_BALL){ ctx.beginPath(); ctx.arc(center.x,center.y,r,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke(); } hitByCircle(center, r*.95); return center }
@@ -2081,17 +2177,45 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden && stream
   if(btn.id==='guideBtn') return;
   btn.addEventListener('click', ()=>{
     const lv = Number(btn.dataset.level || 0);
-    // อ้าง currentLevel ของสคริปต์หลัก (ประกาศ global ใน IIFE แล้ว)
+
+
     window.currentLevel = lv; // กันพลาดข้ามสโคป
+       document.body.classList.add('prestart'); 
     landing.classList.add('hide');
     startScreen.style.display='flex';
+
+        const startBtn    = document.getElementById('startBtn');
+        const countdownEl = document.getElementById('countdown');
+
+if (startBtn){
+  startBtn.style.display = 'inline-block';
+  startBtn.disabled = false;
+  startBtn.style.pointerEvents = 'auto';
+}
+if (countdownEl){
+  countdownEl.style.display = 'none';
+  countdownEl.textContent = '3';
+}
+
     document.getElementById('countdown').style.display='none';
     
-// อัปเดตหัวข้อภารกิจให้ตรงด่านด้วย
-    const st = document.getElementById('startTitle');
-    st.textContent = (lv===1)
-      ? 'ภารกิจ : เลือกสิ่งที่จำเป็นต่อสิ่งมีชีวิตต่อไปนี้'
-      : 'ภารกิจ : เลือกคำตอบว่าสิ่งต่อไปนี้คือ สิ่งมีชีวิต หรือ ไม่มีชีวิต';
+   const st = document.getElementById('startTitle');
+
+function getMissionTitle(lv){
+  switch (lv) {
+    case 1: // ด่าน 1: สิ่งมีชีวิต
+      return 'ภารกิจ : เลือกคำตอบว่าสิ่งต่อไปนี้คือ สิ่งมีชีวิต หรือ ไม่มีชีวิต';
+    case 2: // ด่าน 2: สิ่งจำเป็นต่อสิ่งมีชีวิต
+      return 'ภารกิจ : เลือกสิ่งที่จำเป็นต่อสิ่งมีชีวิตต่อไปนี้';
+    case 3: // ด่าน 3: ประเภทของสัตว์มีกระดูกสันหลัง
+      return 'ภารกิจ : จำแนกประเภทของสัตว์มีกระดูกสันหลัง';
+    default:
+      return 'ภารกิจ : เลือกวงกลมคำตอบจำแนกสิ่งมีชีวิตให้ถูกต้อง';
+  }
+}
+
+    st.textContent = getMissionTitle(lv);
+
   });
 });
 
